@@ -1,3 +1,180 @@
+## v7.4.0 (2021-01-07)
+
+### FEATURES
+
+* [`47ed2dfd8`](https://github.com/npm/cli/commit/47ed2dfd865566643bc1d39e8a4f98d2e1add99a)
+  [#2456](https://github.com/npm/cli/issues/2456) add
+  `--foreground-scripts` option ([@isaacs](https://github.com/isaacs))
+
+### BUG FIXES
+
+* [`d01746a5a`](https://github.com/npm/cli/commit/d01746a5a6dde115ee6a600cdf54c9b35afcab3f)
+  [#2444](https://github.com/npm/cli/issues/2444)
+  [#1103](https://github.com/npm/cli/issues/1103) Remove deprecated
+  `process.umask()` ([@isaacs](https://github.com/isaacs))
+* [`b2e2edf8a`](https://github.com/npm/cli/commit/b2e2edf8aee57347c96a61209c7a10139a0cc85a)
+  [#2422](https://github.com/npm/cli/issues/2422) npm publish --dry-run
+  should not check login status ([@buyan302](https://github.com/buyan302))
+* [`99156df80`](https://github.com/npm/cli/commit/99156df8099f55bc69dfa99d7ddcf8d1d569016e)
+  [#2448](https://github.com/npm/cli/issues/2448)
+  [#2425](https://github.com/npm/cli/issues/2425) pass extra arguments
+  directly to run-script as an array ([@nlf](https://github.com/nlf))
+* [`907b34b2e`](https://github.com/npm/cli/commit/907b34b2ecc34ac376d989f824f7492064e43ef4)
+  [#2455](https://github.com/npm/cli/issues/2455) fix(ci): pay attention to
+  --ignore-scripts ([@wraithgar](https://github.com/wraithgar))
+
+### DEPENDENCIES
+
+* [`7a49fd4af`](https://github.com/npm/cli/commit/7a49fd4afc8cd24db40aee008031ea648583d0bc)
+  `tar@6.1.0`, `pacote@11.1.14`
+* [`54a7bd16c`](https://github.com/npm/cli/commit/54a7bd16c130525ade71ec9894af71c2825d8584)
+  `@npmcli/arborist@2.0.3`
+
+### DOCUMENTATION
+
+* [`a390d7456`](https://github.com/npm/cli/commit/a390d74561b72f0b13cba65844ce60c379198087)
+  [#2440](https://github.com/npm/cli/issues/2440) Updated the url for RFC
+  19 so that it isn't a 404.
+  ([@therealjeffg](https://github.com/therealjeffg))
+* [`e02b46ad7`](https://github.com/npm/cli/commit/e02b46ad7acdeb9fbb63f782e546c2f8db94ae6e)
+  [#2436](https://github.com/npm/cli/issues/2436) Grammatical Fix in npm-ls
+  Documentation 'Therefore' is spelled 'Therefor'
+  ([@marsonya](https://github.com/marsonya))
+* [`0fed44dea`](https://github.com/npm/cli/commit/0fed44dea12f125b639b5e3575adcea74a86d3a0)
+  [#2417](https://github.com/npm/cli/issues/2417) Fix npm bug reporting url
+  ([@AkiaCode](https://github.com/AkiaCode))
+
+## 7.3.0 (2020-12-18)
+
+### FEATURES
+
+* [`a9b8bf263`](https://github.com/npm/cli/commit/a9b8bf2634c627fbb16ca3a6bb2c2f1058c3e586)
+  [#2362](https://github.com/npm/cli/issues/2362)
+  Support multiple set/get/deletes in npm config
+  ([@isaacs](https://github.com/isaacs))
+
+### BUG FIXES
+
+* [`9eef63849`](https://github.com/npm/cli/commit/9eef638499c88689acb00d812c10f0407cb95c08)
+  Pass full set of options to login helper functions.
+  This fixes `npm login --no-strict-ssl`, as well as a host of other
+  options that one might want to set while logging in.
+  Reported by: [@toddself](https://github.com/toddself)
+  ([@isaacs](https://github.com/isaacs))
+* [`628a554bc`](https://github.com/npm/cli/commit/628a554bc113e4e115d34778bfe8a77cfad1d933)
+  [#2358](https://github.com/npm/cli/issues/2358)
+  fix doctor test to work correctly for node pre-release versions
+  ([@nlf](https://github.com/nlf))
+* [`be4a0900b`](https://github.com/npm/cli/commit/be4a0900b14b2c6315bf62bed8f5affb648215ae)
+  [#2360](https://github.com/npm/cli/issues/2360)
+  raise an error early if publishing without login, registry
+  ([@isaacs](https://github.com/isaacs))
+* [`44d433105`](https://github.com/npm/cli/commit/44d4331058c53909ada62470b23b2185102b2128)
+  [#2366](https://github.com/npm/cli/issues/2366)
+  Include prerelease versions when deprecating
+  ([@tiegz](https://github.com/tiegz))
+* [`cba3341da`](https://github.com/npm/cli/commit/cba3341dae4c92541049dc976e82e2ba19566e95)
+  [#2373](https://github.com/npm/cli/issues/2373)
+  npm profile refactor
+  ([@ruyadorno](https://github.com/ruyadorno))
+* [`7539504e3`](https://github.com/npm/cli/commit/7539504e3abdec28039a7798e5ccb745b536cb6e)
+  [#2382](https://github.com/npm/cli/issues/2382)
+  remove the metrics sender
+  ([@nlf](https://github.com/nlf))
+
+### DOCS
+
+* [`b98569a8c`](https://github.com/npm/cli/commit/b98569a8ca28dbd611fe84492aee996e2e567b55)
+  add note about `INIT_CWD` to run-script doc
+* [`292929279`](https://github.com/npm/cli/commit/292929279854a06ca60ff737b574cbd6503ec5db)
+  [#2368](https://github.com/npm/cli/issues/2368)
+  Revert bug-reporting links to GH.
+  Re: <https://blog.npmjs.org/post/188841555980/updates-to-community-docs-more>
+  ([@tiegz](https://github.com/tiegz))
+* [`f4560626f`](https://github.com/npm/cli/commit/f4560626f09dba4889d752f7f739aa5a5f3da741)
+  update `ISSUE_TEMPLATE` with modern links
+  ([@isaacs](https://github.com/isaacs))
+* [`bc1c567ed`](https://github.com/npm/cli/commit/bc1c567ed3d853ed4f01d33a800eb453956de6ef)
+  update npm command doc feature request links
+  ([@isaacs](https://github.com/isaacs))
+* [`0ad958fe1`](https://github.com/npm/cli/commit/0ad958fe1cb811699caca235f361c8328baac8c4)
+  [#2381](https://github.com/npm/cli/issues/2381)
+  (docs,test): assorted typo fixes
+  ([@XhmikosR](https://github.com/XhmikosR))
+
+### TESTING
+
+* [`a92d310b7`](https://github.com/npm/cli/commit/a92d310b7e9e4c48b08f52785c2e3a6d52a82ad7)
+  [#2361](https://github.com/npm/cli/issues/2361)
+  Add max-len to lint rules
+  ([@Edu93Jer](https://github.com/Edu93Jer))
+
+### DEPENDENCIES
+
+* [`4fc2f3e05`](https://github.com/npm/cli/commit/4fc2f3e05b600aa64fe5eb6b8b77bc070e5a9403)
+  [#2300](https://github.com/npm/cli/issues/2300)
+  `@npmcli/config@1.2.8`:
+    * Support setting email without username/password
+
+## 7.2.0 (2020-12-15)
+
+### FEATURES
+
+* [`a9c4b158c`](https://github.com/npm/cli/commit/a9c4b158c46dd0d0c8d8744a97750ffd0c30cc09)
+  [#2342](https://github.com/npm/cli/issues/2342)
+  allow npm rebuild to accept a path to a module
+  ([@nlf](https://github.com/nlf))
+
+### DEPENDENCIES
+
+* [`beb371800`](https://github.com/npm/cli/commit/beb371800292140bf3882253c447168a378bc154)
+  [#2334](https://github.com/npm/cli/issues/2334)
+  remove unused top level dep tough-cookie
+  ([@darcyclarke](https://github.com/darcyclarke))
+* [`d45e181d1`](https://github.com/npm/cli/commit/d45e181d17dd88d82b3a97f8d9cd5fa5b6230e48)
+  [#2335](https://github.com/npm/cli/issues/2335)
+  `ini@2.0.0`, `@npmcli/config@1.2.7`
+  ([@isaacs](https://github.com/isaacs))
+* [`ef4b18b5a`](https://github.com/npm/cli/commit/ef4b18b5a70381b264d234817cff32eeb6848a73)
+  [#2309](https://github.com/npm/cli/issues/2309)
+  `@npmcli/arborist@2.0.2`
+    * properly remove deps when no lockfile and package.json is present
+* [`c6c013e6e`](https://github.com/npm/cli/commit/c6c013e6ebc4fe036695db1fd491eb68f3b57c68)
+  `readdir-scoped-modules@1.1.0`
+* [`a1a2134aa`](https://github.com/npm/cli/commit/a1a2134aa9a1092493db6d6c9a729ff5203f0dd4)
+  remove unused sorted-object dep
+  ([@nlf](https://github.com/nlf))
+* [`85c2a2d31`](https://github.com/npm/cli/commit/85c2a2d318ae066fb2c161174f5aea97e18bc9c5)
+  [#2344](https://github.com/npm/cli/issues/2344)
+  remove editor dependency
+  ([@nlf](https://github.com/nlf))
+
+### TESTING
+
+* [`3a6dd511c`](https://github.com/npm/cli/commit/3a6dd511c944c5f2699825a99bba1dde333a45ef)
+  npm edit
+  ([@nlf](https://github.com/nlf))
+* [`3ba5de4e7`](https://github.com/npm/cli/commit/3ba5de4e7f6c5c0f995a29844926d6ed2833addd)
+  [#2347](https://github.com/npm/cli/issues/2347)
+  npm help-search
+  ([@nlf](https://github.com/nlf))
+* [`6caf19f49`](https://github.com/npm/cli/commit/6caf19f491e144be3e2a1a50f492dad48b01f361)
+  [#2348](https://github.com/npm/cli/issues/2348)
+  npm help
+  ([@nlf](https://github.com/nlf))
+* [`cb5847e32`](https://github.com/npm/cli/commit/cb5847e3203c52062485b5de68e4f6d29b33c361)
+  [#2349](https://github.com/npm/cli/issues/2349)
+  npm hook
+  ([@nlf](https://github.com/nlf))
+* [`996a2f6b1`](https://github.com/npm/cli/commit/996a2f6b130d6678998a2f6a5ec97d75534d5f66)
+  [#2353](https://github.com/npm/cli/issues/2353)
+  npm org
+  ([@nlf](https://github.com/nlf))
+* [`8c67c38a4`](https://github.com/npm/cli/commit/8c67c38a4f476ff5be938db6b6b3ee9ac6b44db5)
+  [#2354](https://github.com/npm/cli/issues/2354)
+  npm set
+  ([@nlf](https://github.com/nlf))
+
 ## 7.1.2 (2020-12-11)
 
 ### DEPENDENCIES
@@ -918,7 +1095,7 @@
     * fix package.json dependencies order
 * [`49b2bf5a7`](https://github.com/npm/cli/commit/49b2bf5a798b49d52166744088a80b8a39ccaeb6)
   `@npmcli/config@1.1.8`
-    * fix unkown envs to be passed through
+    * fix unknown envs to be passed through
     * fix setting correct globalPrefix on load
 * [`f9aac351d`](https://github.com/npm/cli/commit/f9aac351dd36a19d14e1f951a2e8e20b41545822)
   `libnpmversion@1.0.5`

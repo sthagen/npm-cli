@@ -419,6 +419,18 @@ mistakes, unnecessary performance degradation, and malicious input.
 If you don't have a clear idea of what you want to do, it is strongly
 recommended that you do not use this option!
 
+#### foreground-scripts
+
+* Default: false
+* Type: Boolean
+
+Run all build scripts (ie, `preinstall`, `install`, and `postinstall`)
+scripts for installed packages in the foreground process, sharing standard
+input, output, and error with the main npm process.
+
+Note that this will generally make installs run slower, and be much
+noisier, but can be useful for debugging.
+
 #### format-package-lock
 
 * Default: true
@@ -743,13 +755,6 @@ combination). Passed to the `http` `Agent` used to make the request.
 Commit message which is used by `npm version` when creating version commit.
 
 Any "%s" in the message will be replaced with the version number.
-
-#### metrics-registry
-
-* Default: The value of  `registry` (which defaults to "https://registry.npmjs.org/")
-* Type: String
-
-The registry you want to send cli metrics to if `send-metrics` is true.
 
 #### node-options
 
@@ -1088,16 +1093,6 @@ searches.
 
 The age of the cache, in seconds, before another registry request is made if
 using legacy search endpoint.
-
-#### send-metrics
-
-* Default: false
-* Type: Boolean
-
-If true, success/failure metrics will be reported to the registry stored in
-`metrics-registry`.  These requests contain the number of successful and
-failing runs of the npm CLI and the time period over which those counts were
-gathered. No identifying information is included in these requests.
 
 #### shell
 

@@ -1,5 +1,6 @@
 const t = require('tap')
 const requireInject = require('require-inject')
+const { EventEmitter } = require('events')
 
 const redactCwd = (path) => {
   const normalizePath = p => p
@@ -121,7 +122,7 @@ t.test('config list overrides', t => {
 
   config(['list'], (err) => {
     t.ifError(err, 'npm config list')
-    t.matchSnapshot(result, 'should list overriden configs')
+    t.matchSnapshot(result, 'should list overridden configs')
   })
 })
 
@@ -211,6 +212,33 @@ t.test('config delete key', t => {
   })
 })
 
+t.test('config delete multiple key', t => {
+  t.plan(6)
+
+  const expect = [
+    'foo',
+    'bar',
+  ]
+
+  npm.config.delete = (key, where) => {
+    t.equal(key, expect.shift(), 'should delete expected keyword')
+    t.equal(where, 'user', 'should delete key from user config by default')
+  }
+
+  npm.config.save = where => {
+    t.equal(where, 'user', 'should save user config post-delete')
+  }
+
+  config(['delete', 'foo', 'bar'], (err) => {
+    t.ifError(err, 'npm config delete keys')
+  })
+
+  t.teardown(() => {
+    delete npm.config.delete
+    delete npm.config.save
+  })
+})
+
 t.test('config delete key --global', t => {
   t.plan(4)
 
@@ -292,12 +320,43 @@ t.test('config set key=val', t => {
   })
 })
 
+t.test('config set multiple keys', t => {
+  t.plan(11)
+
+  const expect = [
+    ['foo', 'bar'],
+    ['bar', 'baz'],
+    ['asdf', ''],
+  ]
+  const args = ['foo', 'bar', 'bar=baz', 'asdf']
+
+  npm.config.set = (key, val, where) => {
+    const [expectKey, expectVal] = expect.shift()
+    t.equal(key, expectKey, 'should set expected key to user config')
+    t.equal(val, expectVal, 'should set expected value to user config')
+    t.equal(where, 'user', 'should set key/val in user config by default')
+  }
+
+  npm.config.save = where => {
+    t.equal(where, 'user', 'should save user config')
+  }
+
+  config(['set', ...args], (err) => {
+    t.ifError(err, 'npm config set key')
+  })
+
+  t.teardown(() => {
+    delete npm.config.set
+    delete npm.config.save
+  })
+})
+
 t.test('config set key to empty value', t => {
   t.plan(5)
 
   npm.config.set = (key, val, where) => {
     t.equal(key, 'foo', 'should set expected key to user config')
-    t.equal(val, '', 'should set empty value to user config')
+    t.equal(val, '', 'should set "" to user config')
     t.equal(where, 'user', 'should set key/val in user config by default')
   }
 
@@ -402,6 +461,36 @@ t.test('config get key', t => {
   })
 })
 
+t.test('config get multiple keys', t => {
+  t.plan(4)
+
+  const expect = [
+    'foo',
+    'bar',
+  ]
+
+  const npmConfigGet = npm.config.get
+  npm.config.get = (key) => {
+    t.equal(key, expect.shift(), 'should use expected key')
+    return 'asdf'
+  }
+
+  npm.config.save = where => {
+    throw new Error('should not save')
+  }
+
+  config(['get', 'foo', 'bar'], (err) => {
+    t.ifError(err, 'npm config get multiple keys')
+    t.equal(result, 'foo=asdf\nbar=asdf')
+  })
+
+  t.teardown(() => {
+    result = ''
+    npm.config.get = npmConfigGet
+    delete npm.config.save
+  })
+})
+
 t.test('config get private key', t => {
   config(['get', '//private-reg.npmjs.org/:_authThoken'], (err) => {
     t.match(
@@ -437,10 +526,16 @@ sign-git-commit=true`
         cb()
       },
     },
-    editor: (file, { editor }, cb) => {
-      t.equal(file, '~/.npmrc', 'should match user source data')
-      t.equal(editor, 'vi', 'should use default editor')
-      cb()
+    child_process: {
+      spawn: (bin, args) => {
+        t.equal(bin, 'vi', 'should use default editor')
+        t.strictSame(args, ['~/.npmrc'], 'should match user source data')
+        const ee = new EventEmitter()
+        process.nextTick(() => {
+          ee.emit('exit', 0)
+        })
+        return ee
+      },
     },
   }
   const config = requireInject('../../lib/config.js', editMocks)
@@ -487,34 +582,27 @@ t.test('config edit --global', t => {
         cb()
       },
     },
-    editor: (file, { editor }, cb) => {
-      t.equal(file, '/etc/npmrc', 'should match global source data')
-      t.equal(editor, 'vi', 'should use default editor')
-      cb()
+    child_process: {
+      spawn: (bin, args, cb) => {
+        t.equal(bin, 'vi', 'should use default editor')
+        t.strictSame(args, ['/etc/npmrc'], 'should match global source data')
+        const ee = new EventEmitter()
+        process.nextTick(() => {
+          ee.emit('exit', 137)
+        })
+        return ee
+      },
     },
   }
   const config = requireInject('../../lib/config.js', editMocks)
   config(['edit'], (err) => {
-    t.ifError(err, 'npm config edit --global')
+    t.match(err, /exited with code: 137/, 'propagated exit code from editor')
   })
 
   t.teardown(() => {
     flatOptions.global = false
     npm.config.data.delete('user')
     delete npm.config.save
-  })
-})
-
-t.test('config edit no editor set', t => {
-  flatOptions.editor = undefined
-  config(['edit'], (err) => {
-    t.match(
-      err,
-      /No `editor` config or EDITOR environment variable set/,
-      'should throw no available editor error'
-    )
-    flatOptions.editor = 'vi'
-    t.end()
   })
 })
 
