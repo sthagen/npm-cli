@@ -2,6 +2,7 @@ const { test } = require('tap')
 
 const Install = require('../../lib/install.js')
 const requireInject = require('require-inject')
+const mockNpm = require('../fixtures/mock-npm')
 
 test('should install using Arborist', (t) => {
   const SCRIPTS = []
@@ -28,22 +29,22 @@ test('should install using Arborist', (t) => {
         throw new Error('got wrong object passed to reify-finish')
     },
   })
-  const install = new Install({
+
+  const npm = mockNpm({
+    config: { dev: true },
+    flatOptions: { global: false, auditLevel: 'low' },
     globalDir: 'path/to/node_modules/',
     prefix: 'foo',
-    flatOptions: {
-      global: false,
-    },
-    config: {
-      get: () => true,
-    },
   })
+  const install = new Install(npm)
 
   t.test('with args', t => {
     install.exec(['fizzbuzz'], er => {
       if (er)
         throw er
-      t.match(ARB_ARGS, { global: false, path: 'foo' })
+      t.match(ARB_ARGS,
+        { global: false, path: 'foo', auditLevel: null },
+        'Arborist gets correct args and ignores auditLevel')
       t.equal(REIFY_CALLED, true, 'called reify')
       t.strictSame(SCRIPTS, [], 'no scripts when adding dep')
       t.end()
@@ -86,17 +87,16 @@ test('should ignore scripts with --ignore-scripts', (t) => {
       }
     },
   })
-  const install = new Install({
+  const npm = mockNpm({
     globalDir: 'path/to/node_modules/',
     prefix: 'foo',
-    flatOptions: {
-      global: false,
-      ignoreScripts: true,
-    },
+    flatOptions: { global: false },
     config: {
-      get: () => false,
+      global: false,
+      'ignore-scripts': true,
     },
   })
+  const install = new Install(npm)
   install.exec([], er => {
     if (er)
       throw er
@@ -113,16 +113,13 @@ test('should install globally using Arborist', (t) => {
       this.reify = () => {}
     },
   })
-  const install = new Install({
+  const npm = mockNpm({
     globalDir: 'path/to/node_modules/',
     prefix: 'foo',
-    flatOptions: {
-      global: true,
-    },
-    config: {
-      get: () => false,
-    },
+    config: { global: true },
+    flatOptions: { global: true },
   })
+  const install = new Install(npm)
   install.exec([], er => {
     if (er)
       throw er

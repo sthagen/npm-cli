@@ -2,6 +2,43 @@ const test = require('tap')
 const requireInject = require('require-inject')
 const parseJSON = require('json-parse-even-better-errors')
 
+test.test('completion', t => {
+  const SetScript = requireInject('../../lib/set-script.js')
+  const emptyDir = t.testdir()
+  t.test('already have a script name', async t => {
+    const setScript = new SetScript({localPrefix: emptyDir})
+    const res = await setScript.completion({conf: {argv: {remain: ['npm', 'run', 'x']}}})
+    t.equal(res, undefined)
+    t.end()
+  })
+  t.test('no package.json', async t => {
+    const setScript = new SetScript({localPrefix: emptyDir})
+    const res = await setScript.completion({conf: {argv: {remain: ['npm', 'run']}}})
+    t.strictSame(res, [])
+    t.end()
+  })
+  t.test('has package.json, no scripts', async t => {
+    const localPrefix = t.testdir({
+      'package.json': JSON.stringify({}),
+    })
+    const setScript = new SetScript({localPrefix})
+    const res = await setScript.completion({conf: {argv: {remain: ['npm', 'run']}}})
+    t.strictSame(res, [])
+    t.end()
+  })
+  t.test('has package.json, with scripts', async t => {
+    const localPrefix = t.testdir({
+      'package.json': JSON.stringify({
+        scripts: { hello: 'echo hello', world: 'echo world' },
+      }),
+    })
+    const setScript = new SetScript({localPrefix})
+    const res = await setScript.completion({conf: {argv: {remain: ['npm', 'run']}}})
+    t.strictSame(res, ['hello', 'world'])
+    t.end()
+  })
+  t.end()
+})
 test.test('fails on invalid arguments', (t) => {
   const SetScript = requireInject('../../lib/set-script.js', {
     npmlog: {},
@@ -31,6 +68,7 @@ test.test('fails when package.json not found', (t) => {
 })
 test.test('fails on invalid JSON', (t) => {
   const SetScript = requireInject('../../lib/set-script.js', {
+    '../../lib/utils/config/definitions.js': {},
     fs: {
       readFile: () => {}, // read-package-json-fast explodes w/o this
       readFileSync: (name, charcode) => {
@@ -45,6 +83,7 @@ test.test('fails on invalid JSON', (t) => {
 test.test('creates scripts object', (t) => {
   var mockFile = ''
   const SetScript = requireInject('../../lib/set-script.js', {
+    '../../lib/utils/config/definitions.js': {},
     fs: {
       readFileSync: (name, charcode) => {
         return '{}'
@@ -70,6 +109,7 @@ test.test('creates scripts object', (t) => {
 test.test('warns before overwriting', (t) => {
   var warningListened = ''
   const SetScript = requireInject('../../lib/set-script.js', {
+    '../../lib/utils/config/definitions.js': {},
     fs: {
       readFileSync: (name, charcode) => {
         return JSON.stringify({
@@ -102,6 +142,7 @@ test.test('warns before overwriting', (t) => {
 test.test('provided indentation and eol is used', (t) => {
   var mockFile = ''
   const SetScript = requireInject('../../lib/set-script.js', {
+    '../../lib/utils/config/definitions.js': {},
     fs: {
       readFileSync: (name, charcode) => {
         return '{}'
@@ -128,6 +169,7 @@ test.test('provided indentation and eol is used', (t) => {
 test.test('goes to default when undefined indent and eol provided', (t) => {
   var mockFile = ''
   const SetScript = requireInject('../../lib/set-script.js', {
+    '../../lib/utils/config/definitions.js': {},
     fs: {
       readFileSync: (name, charcode) => {
         return '{}'
