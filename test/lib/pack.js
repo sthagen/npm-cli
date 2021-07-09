@@ -1,6 +1,7 @@
 const t = require('tap')
-const mockNpm = require('../fixtures/mock-npm')
+const { fake: mockNpm } = require('../fixtures/mock-npm')
 const pacote = require('pacote')
+const path = require('path')
 
 const OUTPUT = []
 const output = (...msg) => OUTPUT.push(msg)
@@ -27,6 +28,7 @@ const mockPacote = {
 t.afterEach(() => OUTPUT.length = 0)
 
 t.test('should pack current directory with no arguments', (t) => {
+  let tarballFileName
   const Pack = t.mock('../../lib/pack.js', {
     libnpmpack,
     npmlog: {
@@ -34,12 +36,47 @@ t.test('should pack current directory with no arguments', (t) => {
       showProgress: () => {},
       clearProgress: () => {},
     },
+    fs: {
+      writeFile: (file, data, cb) => {
+        tarballFileName = file
+        cb()
+      },
+    },
+  })
+  const npm = mockNpm({
+    output,
+  })
+  const pack = new Pack(npm)
+
+  pack.exec([], err => {
+    t.error(err, { bail: true })
+
+    const filename = `npm-${require('../../package.json').version}.tgz`
+    t.strictSame(OUTPUT, [[filename]])
+    t.strictSame(tarballFileName, path.resolve(filename))
+    t.end()
+  })
+})
+
+t.test('follows pack-destination config', (t) => {
+  let tarballFileName
+  const Pack = t.mock('../../lib/pack.js', {
+    libnpmpack,
+    npmlog: {
+      notice: () => {},
+      showProgress: () => {},
+      clearProgress: () => {},
+    },
+    fs: {
+      writeFile: (file, data, cb) => {
+        tarballFileName = file
+        cb()
+      },
+    },
   })
   const npm = mockNpm({
     config: {
-      unicode: false,
-      json: false,
-      'dry-run': false,
+      'pack-destination': '/tmp/test',
     },
     output,
   })
@@ -50,10 +87,10 @@ t.test('should pack current directory with no arguments', (t) => {
 
     const filename = `npm-${require('../../package.json').version}.tgz`
     t.strictSame(OUTPUT, [[filename]])
+    t.strictSame(tarballFileName, path.resolve('/tmp/test', filename))
     t.end()
   })
 })
-
 t.test('should pack given directory', (t) => {
   const testDir = t.testdir({
     'package.json': JSON.stringify({
@@ -69,11 +106,14 @@ t.test('should pack given directory', (t) => {
       showProgress: () => {},
       clearProgress: () => {},
     },
+    fs: {
+      writeFile: (file, data, cb) => cb(),
+    },
   })
   const npm = mockNpm({
     config: {
       unicode: true,
-      json: true,
+      json: false,
       'dry-run': true,
     },
     output,
@@ -104,11 +144,14 @@ t.test('should pack given directory for scoped package', (t) => {
       showProgress: () => {},
       clearProgress: () => {},
     },
+    fs: {
+      writeFile: (file, data, cb) => cb(),
+    },
   })
   const npm = mockNpm({
     config: {
       unicode: true,
-      json: true,
+      json: false,
       'dry-run': true,
     },
     output,
@@ -138,6 +181,9 @@ t.test('should log pack contents', (t) => {
       showProgress: () => {},
       clearProgress: () => {},
     },
+    fs: {
+      writeFile: (file, data, cb) => cb(),
+    },
   })
   const npm = mockNpm({
     config: {
@@ -158,6 +204,96 @@ t.test('should log pack contents', (t) => {
   })
 })
 
+t.test('should log output as valid json', (t) => {
+  const testDir = t.testdir({
+    'package.json': JSON.stringify({
+      name: 'my-cool-pkg',
+      version: '1.0.0',
+      main: './index.js',
+    }, null, 2),
+    'README.md': 'text',
+    'index.js': 'void',
+  })
+
+  const Pack = t.mock('../../lib/pack.js', {
+    libnpmpack,
+    '../../lib/utils/tar.js': {
+      getContents: async () => ({
+        id: '@ruyadorno/redact@1.0.0',
+        name: '@ruyadorno/redact',
+        version: '1.0.0',
+        size: 2450,
+        unpackedSize: 4911,
+        shasum: '044c7574639b923076069d6e801e2d1866430f17',
+        // mocks exactly how ssri Integrity works:
+        integrity: {
+          sha512: [
+            {
+              source: 'sha512-JSdyskeR2qonBUaQ4vdlU/vQGSfgCxSq5O+vH+d2yVWRqzso4O3gUzd6QX/V7OWV//zU7kA5o63Zf433jUnOtQ==',
+              digest: 'JSdyskeR2qonBUaQ4vdlU/vQGSfgCxSq5O+vH+d2yVWRqzso4O3gUzd6QX/V7OWV//zU7kA5o63Zf433jUnOtQ==',
+              algorithm: 'sha512',
+              options: [],
+            },
+          ],
+          toJSON () {
+            return 'sha512-JSdyskeR2qonBUaQ4vdlU/vQGSfgCxSq5O+vH+d2yVWRqzso4O3gUzd6QX/V7OWV//zU7kA5o63Zf433jUnOtQ=='
+          },
+        },
+        filename: '@ruyadorno/redact-1.0.0.tgz',
+        files: [
+          { path: 'LICENSE', size: 1113, mode: 420 },
+          { path: 'README.md', size: 2639, mode: 420 },
+          { path: 'index.js', size: 719, mode: 493 },
+          { path: 'package.json', size: 440, mode: 420 },
+        ],
+        entryCount: 4,
+        bundled: [],
+      }),
+    },
+    npmlog: {
+      notice: () => {},
+      showProgress: () => {},
+      clearProgress: () => {},
+    },
+    fs: {
+      writeFile: (file, data, cb) => cb(),
+    },
+  })
+  const npm = mockNpm({
+    config: {
+      unicode: true,
+      json: true,
+      'dry-run': true,
+    },
+    output,
+  })
+  const pack = new Pack(npm)
+
+  pack.exec([testDir], err => {
+    t.error(err, { bail: true })
+
+    t.match(JSON.parse(OUTPUT), [{
+      id: '@ruyadorno/redact@1.0.0',
+      name: '@ruyadorno/redact',
+      version: '1.0.0',
+      size: 2450,
+      unpackedSize: 4911,
+      shasum: '044c7574639b923076069d6e801e2d1866430f17',
+      integrity: 'sha512-JSdyskeR2qonBUaQ4vdlU/vQGSfgCxSq5O+vH+d2yVWRqzso4O3gUzd6QX/V7OWV//zU7kA5o63Zf433jUnOtQ==',
+      filename: '@ruyadorno/redact-1.0.0.tgz',
+      files: [
+        { path: 'LICENSE' },
+        { path: 'README.md' },
+        { path: 'index.js' },
+        { path: 'package.json' },
+      ],
+      entryCount: 4,
+    }], 'pack details output as valid json')
+
+    t.end()
+  })
+})
+
 t.test('invalid packument', (t) => {
   const mockPacote = {
     manifest: () => {
@@ -172,11 +308,14 @@ t.test('invalid packument', (t) => {
       showProgress: () => {},
       clearProgress: () => {},
     },
+    fs: {
+      writeFile: (file, data, cb) => cb(),
+    },
   })
   const npm = mockNpm({
     config: {
       unicode: true,
-      json: true,
+      json: false,
       'dry-run': true,
     },
     output,
@@ -217,6 +356,9 @@ t.test('workspaces', (t) => {
       notice: () => {},
       showProgress: () => {},
       clearProgress: () => {},
+    },
+    fs: {
+      writeFile: (file, data, cb) => cb(),
     },
   })
   const npm = mockNpm({

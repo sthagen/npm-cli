@@ -1,9 +1,8 @@
+const t = require('tap')
 const fs = require('fs')
 const { resolve } = require('path')
-const t = require('tap')
-const mockNpm = require('../fixtures/mock-npm')
+const { fake: mockNpm } = require('../fixtures/mock-npm')
 
-let result = ''
 const npmLog = {
   disableProgress: () => null,
   enableProgress: () => null,
@@ -13,15 +12,18 @@ const npmLog = {
   silly: () => null,
 }
 const config = {
+  cache: 'bad-cache-dir',
   'init-module': '~/.npm-init.js',
   yes: true,
 }
+const flatOptions = {
+  cache: 'test-config-dir/_cacache',
+  npxCache: 'test-config-dir/_npx',
+}
 const npm = mockNpm({
+  flatOptions,
   config,
   log: npmLog,
-  output: (...msg) => {
-    result += msg.join('\n')
-  },
 })
 const mocks = {
   '../../lib/utils/usage.js': () => 'usage instructions',
@@ -33,7 +35,6 @@ const _consolelog = console.log
 const noop = () => {}
 
 t.afterEach(() => {
-  result = ''
   config.yes = true
   config.package = undefined
   npm.log = npmLog
@@ -87,16 +88,18 @@ t.test('classic interactive npm init', t => {
 })
 
 t.test('npm init <arg>', t => {
-  t.plan(1)
+  t.plan(3)
   npm.localPrefix = t.testdir({})
 
   const Init = t.mock('../../lib/init.js', {
-    libnpmexec: ({ args }) => {
+    libnpmexec: ({ args, cache, npxCache }) => {
       t.same(
         args,
         ['create-react-app'],
         'should npx with listed packages'
       )
+      t.same(cache, flatOptions.cache)
+      t.same(npxCache, flatOptions.npxCache)
     },
   })
   const init = new Init(npm)
@@ -322,6 +325,9 @@ t.test('npm init error', t => {
 
 t.test('workspaces', t => {
   t.test('no args', t => {
+    t.teardown(() => {
+      npm._mockOutputs.length = 0
+    })
     npm.localPrefix = t.testdir({
       'package.json': JSON.stringify({
         name: 'top-level',
@@ -340,12 +346,15 @@ t.test('workspaces', t => {
       if (err)
         throw err
 
-      t.matchSnapshot(result, 'should print helper info')
+      t.matchSnapshot(npm._mockOutputs, 'should print helper info')
       t.end()
     })
   })
 
   t.test('no args, existing folder', t => {
+    t.teardown(() => {
+      npm._mockOutputs.length = 0
+    })
     // init-package-json prints directly to console.log
     // this avoids poluting test output with those logs
     console.log = noop
@@ -369,12 +378,15 @@ t.test('workspaces', t => {
       if (err)
         throw err
 
-      t.matchSnapshot(result, 'should print helper info')
+      t.matchSnapshot(npm._mockOutputs, 'should print helper info')
       t.end()
     })
   })
 
   t.test('with arg but missing workspace folder', t => {
+    t.teardown(() => {
+      npm._mockOutputs.length = 0
+    })
     // init-package-json prints directly to console.log
     // this avoids poluting test output with those logs
     console.log = noop
@@ -401,7 +413,7 @@ t.test('workspaces', t => {
       if (err)
         throw err
 
-      t.matchSnapshot(result, 'should print helper info')
+      t.matchSnapshot(npm._mockOutputs, 'should print helper info')
       t.end()
     })
   })
@@ -419,8 +431,10 @@ t.test('workspaces', t => {
 
     const Init = t.mock('../../lib/init.js', {
       ...mocks,
-      'json-parse-even-better-errors': () => {
-        throw new Error('ERR')
+      '@npmcli/package-json': {
+        async load () {
+          throw new Error('ERR')
+        },
       },
     })
     const init = new Init(npm)
@@ -428,7 +442,7 @@ t.test('workspaces', t => {
     init.execWorkspaces([], ['a'], err => {
       t.match(
         err,
-        /Invalid package.json: Error: ERR/,
+        /ERR/,
         'should exit with error'
       )
       t.end()
@@ -440,30 +454,16 @@ t.test('workspaces', t => {
     // this avoids poluting test output with those logs
     console.log = noop
 
-    npm.localPrefix = t.testdir({
-      'package.json': JSON.stringify({
-        name: 'top-level',
-      }),
-    })
+    npm.localPrefix = t.testdir({})
 
-    const Init = t.mock('../../lib/init.js', {
-      ...mocks,
-      fs: {
-        statSync () {
-          return true
-        },
-        readFileSync () {
-          throw new Error('ERR')
-        },
-      },
-    })
+    const Init = require('../../lib/init.js')
     const init = new Init(npm)
 
     init.execWorkspaces([], ['a'], err => {
       t.match(
         err,
-        /package.json not found/,
-        'should exit with error'
+        { code: 'ENOENT' },
+        'should exit with missing package.json file error'
       )
       t.end()
     })
