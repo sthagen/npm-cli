@@ -1,4 +1,61 @@
-## V7.20.2 (2021-07-27)
+## v7.20.5 (2021-08-05)
+
+### DEPENDENCIES
+
+* [`44377738e`](https://github.com/npm/cli/commit/44377738ef6b53607a7b17162aec984d5dcf7c58)
+  `graceful-fs@4.2.8`
+  * fix: start retrying immediately, stop after 60 seconds
+
+
+## v7.20.4 (2021-08-05)
+
+### BUG FIXES
+
+* [`6a8086e25`](https://github.com/npm/cli/commit/6a8086e258aa209b877e182db4b75f11de5b291d)
+  [#3463](https://github.com/npm/cli/issues/3463)
+  fix(tests): move more tests to use real npm
+  ([@wraithgar](https://github.com/wraithgar))
+
+### DEPENDENCIES
+
+* [`15fae4941`](https://github.com/npm/cli/commit/15fae4941475f4398e47d9cc4eb6a73683e15aac)
+  `tar@6.1.6`:
+  * fix: properly handle top-level files when using strip
+  * Avoid an unlikely but theoretically possible redos
+  * WriteEntry backpressure
+  * fix(unpack): always resume parsing after an entry error
+  * fix(unpack): fix hang on large file on open() fail
+  * fix: properly prefix hard links
+* [`745326de0`](https://github.com/npm/cli/commit/745326de0fae9f27f1deaf7729777aae48ac29fc)
+  `libnpmexec@2.0.1`:
+  * Clear progress bar which overlays confirm prompt
+* [`e82bcd4e8`](https://github.com/npm/cli/commit/e82bcd4e8355d083f8f3eedb6251a5f3053d6dfd)
+  `graceful-fs@4.2.7`:
+  * fix: start retrying immediately, stop after 10 attempts
+
+## v7.20.3 (2021-07-29)
+
+### BUG FIXES
+
+* [`66dc5f94d`](https://github.com/npm/cli/commit/66dc5f94dfb5bc99c715e075cde1ab9c1ec84a83)
+  [#3588](https://github.com/npm/cli/issues/3588)
+  update eresolve explanations for new arborist data provided
+* [`99575acab`](https://github.com/npm/cli/commit/99575acab5c93c03c59cb918c7916647b2c0be51)
+  [#3591](https://github.com/npm/cli/issues/3591)
+  fix(node_modules): remove duplicated file
+  ([@wraithgar](https://github.com/wraithgar))
+
+### DEPENDENCIES
+
+* [`97cb5ec31`](https://github.com/npm/cli/commit/97cb5ec312e151527ba2aab77ed0307917e1d845)
+  `@npmcli/arborist@2.8.0`:
+  * Refactor ideal tree building to handle more complicated
+    peerDependencies use cases.
+  * Do not modify ideal tree while checking if a peerSet can be placed.
+* [`7db1a0a26`](https://github.com/npm/cli/commit/7db1a0a264cf67d2a2a3cdc71bbf09b36dc45075)
+  chore(deps): `mime-types@1.49.0` `mime-db@1.49.0`
+
+## v7.20.2 (2021-07-27)
 
 ### DEPENDENCIES
 
