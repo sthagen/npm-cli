@@ -1,3 +1,64 @@
+## v7.22.0 (2021-09-02)
+
+### BUG FIXES
+* [`6f431fe23`](https://github.com/npm/cli/commit/6f431fe2325f77b4370f95848359a36fe7a011d1)
+  [#3690](https://github.com/npm/cli/issues/3690)
+  Fix one “see also” link
+  ([@tripu](https://github.com/tripu))
+
+### DEPENDENCIES
+* [`033e948c9`](https://github.com/npm/cli/commit/033e948c95b3455812e03a860ad1bd96a635e7eb)
+  `read-package-json@4.1.1`:
+  * feat: add types lookup
+  * fix(man): don't lose relative man path
+* [`1fa549db0`](https://github.com/npm/cli/commit/1fa549db0955b55fd680a658809a6d97be306b06)
+  `@npmcli/config@2.3.0`:
+  * feat: export npm_config_local_prefix and npm_config_global_prefix to the environment
+* [`e91578d10`](https://github.com/npm/cli/commit/e91578d10b1d5d930fec32e7070d975af4892140)
+  `minpass-fetch@1.4.1`:
+  * Made rejectUnauthorized depend on NODE_TLS_REJECT_UNAUTHORIZED
+* [`6125db545`](https://github.com/npm/cli/commit/6125db545315da0217fe7b05062fd0a504c9a45b)
+  `are-we-there-yet@1.1.6`
+* [`0dcda73b0`](https://github.com/npm/cli/commit/0dcda73b022083338c4cb755390a275757b9627b)
+  `string_decoder@1.3.0`
+* [`4b913417c`](https://github.com/npm/cli/commit/4b913417c4e30980505a02eec50810f895dd52d7)
+  `npmlog@5.0.1`
+* [`876c755eb`](https://github.com/npm/cli/commit/876c755eb0dfc215123682f798b5fca415f7c7d9)
+  `@npmcli/arborist@2.8.3`:
+  * fix: do not fail adding unresolvable optional dep
+
+## v7.21.1 (2021-08-26)
+
+### BUG FIXES
+
+* [`4e52217cb`](https://github.com/npm/cli/commit/4e52217cb25a697b0f6b0131bcb8c87e0dbcda53)
+  [#3684](https://github.com/npm/cli/issues/3684)
+  fix(config): respect --global, --package-lock-only
+  ([@nlf](https://github.com/nlf))
+
+### DEPENDENCIES
+
+* [`e3878536f`](https://github.com/npm/cli/commit/e3878536f3612d9ddc3002c126cfa9a91021c7db)
+  `make-fetch-happen@9.1.0`:
+  * fix: use the same strictSSL default as tls.connect
+* [`145f70cc1`](https://github.com/npm/cli/commit/145f70cc1b78dee4ffa53f557fa72d0948696839)
+  `read-package-json@4.0.1`:
+  * fix: Add gitHead in subdirectories too
+  * fix(man): don't resolve paths to man files
+* [`3f4d37143`](https://github.com/npm/cli/commit/3f4d371432a1fc8280e73d8467acd0eed0bbef26)
+  `tar@6.1.11`:
+  * fix: perf regression on hot string munging path
+* [`e63a942c6`](https://github.com/npm/cli/commit/e63a942c685233fa546788981ed9c144220d50e1)
+  `cacache@15.3.0`:
+  * feat: introduce @npmcli/fs for tmp dir methods
+
+### DOCUMENTATION
+
+* [`957fa6040`](https://github.com/npm/cli/commit/957fa604035992285572f63c38545eea86bbb1ff)
+  [#3681](https://github.com/npm/cli/issues/3681)
+  clarify uninstall lifecycle script
+  ([@fritzy](https://github.com/fritzy))
+
 ## v7.21.0 (2021-08-19)
 
 ### FEATURES
