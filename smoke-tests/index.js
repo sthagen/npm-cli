@@ -30,7 +30,7 @@ const path = t.testdir({
 })
 const localPrefix = resolve(path, 'project')
 const userconfigLocation = resolve(path, '.npmrc')
-const npmLocation = resolve(__dirname, '..')
+const npmLocation = resolve(__dirname, '../bin/npm-cli.js')
 const cacheLocation = resolve(path, 'cache')
 const binLocation = resolve(path, 'bin')
 const env = {
@@ -174,9 +174,13 @@ t.test('npm diff', async t => {
 
 t.test('npm outdated', async t => {
   const cmd = `${npmBin} outdated`
-  const cmdRes = await exec(cmd)
+  const cmdRes = await exec(cmd).catch(err => {
+    t.equal(err.code, 1, 'should exit with error code')
+    return err
+  })
 
-  t.matchSnapshot(cmdRes,
+  t.not(cmdRes.stderr, '', 'should have stderr output')
+  t.matchSnapshot(String(cmdRes.stdout),
     'should have expected outdated output')
 })
 
