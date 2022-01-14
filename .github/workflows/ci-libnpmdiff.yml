@@ -1,4 +1,4 @@
-name: Node CI libnpmdiff
+name: Node Workspace CI libnpmdiff
 
 on:
   pull_request:
@@ -20,17 +20,17 @@ jobs:
     steps:
       # Checkout the npm/cli repo
       - uses: actions/checkout@v2
-      - name: Use Node.js 14.x
+      - name: Use Node.js 16.x
         uses: actions/setup-node@v2
         with:
-          node-version: 14.x
+          node-version: 16.x
           cache: npm
       - name: Install dependencies
         run: |
           node ./bin/npm-cli.js install --ignore-scripts --no-audit
           node ./bin/npm-cli.js rebuild
       - name: Run linting
-        run: node ./bin/npm-cli.js run posttest -w libnpmdiff
+        run: node ./bin/npm-cli.js run posttest -w workspaces/libnpmdiff
         env:
           DEPLOY_VERSION: testing
 
@@ -73,4 +73,4 @@ jobs:
 
       # Run the tests, but not if we're just gonna do coveralls later anyway
     - name: Run Tap tests
-      run: node ./bin/npm-cli.js run -w libnpmdiff --ignore-scripts test -- -t600 -Rbase -c
+      run: node ./bin/npm-cli.js run -w workspaces/libnpmdiff --ignore-scripts test -- -t600 -Rbase -c
