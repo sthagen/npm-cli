@@ -17,6 +17,25 @@
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
 <a name="5.0.2"></a>
+## 1.0.0 (2022-03-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **libnpmhook:** the log option is no longer passed to the updated deps
+
+### Bug Fixes
+
+* added arborist action and updated template-oss ([#4215](https://www.github.com/sthagen/npm-cli/issues/4215)) ([aa538df](https://www.github.com/sthagen/npm-cli/commit/aa538df4c19f46d2e24e2635d1214176c662fcea))
+* set proper workspace repo urls in package.json ([#4476](https://www.github.com/sthagen/npm-cli/issues/4476)) ([0cfc155](https://www.github.com/sthagen/npm-cli/commit/0cfc155db5f11ce23419e440111d99a63bf39754))
+
+
+### Dependencies
+
+* libnpmhook@8.0.0 ([1dab298](https://www.github.com/sthagen/npm-cli/commit/1dab29805c820f82e4bae18123e911fec6948dfd))
+* **libnpmhook:** update to latest major versions of npm deps ([78f4a01](https://www.github.com/sthagen/npm-cli/commit/78f4a013c6e577714bda6851fb69a39c873571af))
+* npm-registry-fetch@12.0.1 ([1bfc507](https://www.github.com/sthagen/npm-cli/commit/1bfc507f2a5afa02f04d4dea2fc6d151d4fef3ac))
+
 ## [5.0.2](https://github.com/npm/libnpmhook/compare/v5.0.1...v5.0.2) (2018-08-24)
 
 
