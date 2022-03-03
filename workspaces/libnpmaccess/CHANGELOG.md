@@ -1,6 +1,25 @@
 # Change Log
 
 <a name="4.0.0"></a>
+## 1.0.0 (2022-03-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **libnpmaccess:** the log option is no longer passed to the updated deps
+
+### Bug Fixes
+
+* added arborist action and updated template-oss ([#4215](https://www.github.com/sthagen/npm-cli/issues/4215)) ([aa538df](https://www.github.com/sthagen/npm-cli/commit/aa538df4c19f46d2e24e2635d1214176c662fcea))
+* set proper workspace repo urls in package.json ([#4476](https://www.github.com/sthagen/npm-cli/issues/4476)) ([0cfc155](https://www.github.com/sthagen/npm-cli/commit/0cfc155db5f11ce23419e440111d99a63bf39754))
+
+
+### Dependencies
+
+* libnpmaccess@6.0.0 ([77399cb](https://www.github.com/sthagen/npm-cli/commit/77399cb988d984133bfc2885a6407ffc56b9152d))
+* **libnpmaccess:** update to latest major versions of npm deps ([381d0e1](https://www.github.com/sthagen/npm-cli/commit/381d0e14df19371ce0ddee3eef66ac96169e7d46))
+* npm-registry-fetch@12.0.1 ([1bfc507](https://www.github.com/sthagen/npm-cli/commit/1bfc507f2a5afa02f04d4dea2fc6d151d4fef3ac))
+
 ## [4.0.0](https://github.com/npm/libnpmaccess/compare/v3.0.2...v4.0.0) (2020-03-02)
 
 ### BREAKING CHANGES
