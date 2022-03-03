@@ -18,6 +18,25 @@
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
 <a name="2.0.2"></a>
+## 1.0.0 (2022-03-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **libnpmsearch:** the log option is no longer passed to the updated deps
+
+### Bug Fixes
+
+* added arborist action and updated template-oss ([#4215](https://www.github.com/sthagen/npm-cli/issues/4215)) ([aa538df](https://www.github.com/sthagen/npm-cli/commit/aa538df4c19f46d2e24e2635d1214176c662fcea))
+* set proper workspace repo urls in package.json ([#4476](https://www.github.com/sthagen/npm-cli/issues/4476)) ([0cfc155](https://www.github.com/sthagen/npm-cli/commit/0cfc155db5f11ce23419e440111d99a63bf39754))
+
+
+### Dependencies
+
+* libnpmsearch@5.0.0 ([8b26a6d](https://www.github.com/sthagen/npm-cli/commit/8b26a6db13c37a6f0df86c54ca859ad2f9627825))
+* **libnpmsearch:** update to latest major versions of npm deps ([1c09034](https://www.github.com/sthagen/npm-cli/commit/1c09034d41db3a7dc622a2ec56e303aa63980d7b))
+* npm-registry-fetch@12.0.1 ([1bfc507](https://www.github.com/sthagen/npm-cli/commit/1bfc507f2a5afa02f04d4dea2fc6d151d4fef3ac))
+
 ## [2.0.2](https://github.com/npm/libnpmsearch/compare/v2.0.1...v2.0.2) (2019-07-16)
 
 
