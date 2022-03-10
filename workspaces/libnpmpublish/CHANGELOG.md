@@ -1,5 +1,12 @@
 # Changelog
 
+### [6.0.2](https://www.github.com/sthagen/npm-cli/compare/libnpmpublish-v6.0.1...libnpmpublish-v6.0.2) (2022-03-10)
+
+
+### Documentation
+
+* standardize changelog heading ([#4510](https://www.github.com/sthagen/npm-cli/issues/4510)) ([91f03ee](https://www.github.com/sthagen/npm-cli/commit/91f03ee618bc635f9cfbded735fe98bbfa9d643f))
+
 ## [3.0.1](https://github.com/npm/libnpmpublish/compare/v3.0.0...v3.0.1) (2020-03-27)
 
 ### Features
