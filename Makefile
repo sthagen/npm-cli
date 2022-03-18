@@ -33,8 +33,8 @@ docs: mandocs htmldocs
 # don't regenerate the snapshot if we're generating
 # snapshots, since presumably we just did that.
 mandocs: dev-deps $(mandocs)
-	@ ! [ $${npm_lifecycle_event} = "snap" ] && \
-	  ! [ $${npm_lifecycle_event} = "postsnap" ] && \
+	@ ! [ "$${npm_lifecycle_event}" = "snap" ] && \
+	  ! [ "$${npm_lifecycle_event}" = "postsnap" ] && \
 	  TAP_SNAPSHOT=1 node test/lib/utils/config/definitions.js || true
 
 $(version_mandocs): package.json
@@ -78,7 +78,7 @@ man/man7/%.7: docs/content/using-npm/%.md scripts/docs-build.js
 docs/content/using-npm/config.md: scripts/config-doc.js lib/utils/config/*.js
 	node scripts/config-doc.js
 
-docs/content/commands/npm-%.md: lib/%.js scripts/config-doc-command.js lib/utils/config/*.js
+docs/content/commands/npm-%.md: lib/commands/%.js scripts/config-doc-command.js lib/utils/config/*.js
 	node scripts/config-doc-command.js $@ $<
 
 freshdocs:
