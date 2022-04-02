@@ -1163,6 +1163,26 @@ This is a one-time fix-up, please be patient...
   ])
 })
 
+t.test('inflating a link node in an old lockfile skips registry', async t => {
+  const checkLogs = warningTracker()
+  const path = resolve(fixtures, 'old-lock-with-link')
+  const arb = new Arborist({ path, ...OPT, registry: 'http://invalid.host' })
+  const tree = await arb.buildIdealTree()
+  t.matchSnapshot(printTree(tree))
+  t.strictSame(checkLogs(), [
+    [
+      'warn',
+      'old lockfile',
+      `
+The package-lock.json file was created with an old version of npm,
+so supplemental metadata must be fetched from the registry.
+
+This is a one-time fix-up, please be patient...
+`,
+    ],
+  ])
+})
+
 t.test('warn for ancient lockfile, even if we use v1', async t => {
   const checkLogs = warningTracker()
   const path = resolve(fixtures, 'sax')
@@ -2193,10 +2213,10 @@ t.test('update global', async t => {
   })
 
   t.matchSnapshot(await printIdeal(path, { global: true, update: ['abbrev'] }),
-    'updating missing dep should have no effect')
+    'updating missing dep should have no effect, but fix the invalid node')
 
   t.matchSnapshot(await printIdeal(path, { global: true, update: ['wrappy'] }),
-    'updating sub-dep has no effect')
+    'updating sub-dep has no effect, but fixes the invalid node')
 
   const invalidArgs = [
     'once@1.4.0',
@@ -2214,7 +2234,7 @@ t.test('update global', async t => {
   }
 
   t.matchSnapshot(await printIdeal(path, { global: true, update: ['once'] }),
-    'update a single dep')
+    'update a single dep, also fixes the invalid node')
   t.matchSnapshot(await printIdeal(path, { global: true, update: true }),
     'update all the deps')
 })
