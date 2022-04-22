@@ -8,6 +8,11 @@ const config = require('@npmcli/template-oss')
 const { resolve, relative } = require('path')
 
 const exec = (...args) => execSync(...args).toString().trim()
+const today = () => {
+  const d = new Date()
+  const pad = s => s.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
 
 const usage = () => `
   node ${relative(process.cwd(), __filename)} [--read|-r] [--write|-w] [tag]
@@ -74,7 +79,7 @@ const RELEASE = {
     return s.startsWith(TAG_PREFIX) ? s : TAG_PREFIX + s
   },
   date (d) {
-    return `(${d || exec('date +%Y-%m-%d')})`
+    return `(${d})`
   },
   title (v, d) {
     return `${this.heading}${this.version(v)} ${this.date(d)}`
@@ -92,7 +97,7 @@ const assertArgs = (args) => {
     return process.exit(0)
   }
 
-  if (args.unsafe) {
+  if (args.force) {
     // just to make manual testing easier
     return args
   }
@@ -104,7 +109,7 @@ const assertArgs = (args) => {
     const current = exec(`git rev-parse --abbrev-ref HEAD`)
 
     if (current !== args.branch) {
-      throw new Error(`Must be on branch "${args.branch}"`)
+      throw new Error(`Must be on branch "${args.branch}", rerun with --force to override`)
     }
 
     const localLog = exec(`git log ${remoteBranch}..HEAD`).length > 0
@@ -125,10 +130,11 @@ const parseArgs = (argv) => {
     branch: 'latest',
     remote: 'origin',
     type: 'md', // or 'gh'
+    format: 'short', // or 'long'
     write: false,
     read: false,
     help: false,
-    unsafe: false,
+    force: false,
   }
 
   for (const arg of argv) {
@@ -172,13 +178,13 @@ const findRelease = (args, version) => {
     RELEASE.heading,
     v ? escRegExp(v) : RELEASE.versionRe,
     ' ',
-    escRegExp(RELEASE.date()).replace(/\d/g, '\\d'),
+    escRegExp(RELEASE.date(today())).replace(/\d/g, '\\d'),
     '$',
   ].join('')
 
   const releaseSrc = [
     '(',
-    titleSrc(RELEASE.version(version)),
+    titleSrc(version && RELEASE.version(version)),
     '[\\s\\S]*?',
     RELEASE.sep,
     ')',
@@ -265,6 +271,29 @@ const generateRelease = async (args) => {
     let [title, ...body] = message.split('\n')
 
     const prs = commit.associatedPullRequests.nodes.filter((pull) => pull.merged)
+
+    // external squashed PRs dont get the associated pr node set
+    // so we try to grab it from the end of the commit title
+    // since thats where it goes by default
+    const [, titleNumber] = title.match(/\s+\(#(\d+)\)$/) || []
+    console.log(prs, titleNumber)
+    if (titleNumber && !prs.find((pr) => pr.number === +titleNumber)) {
+      console.log('no title')
+      try {
+        // it could also reference an issue so we do one extra check
+        // to make sure it is really a pr that has been merged
+        const realPr = JSON.parse(exec(`gh pr view ${titleNumber} --json url,number,state`, {
+          stdio: 'pipe',
+        }))
+        if (realPr.state === 'MERGED') {
+          prs.push(realPr)
+        }
+      } catch {
+        // maybe an issue or something else went wrong
+        // not super important so keep going
+      }
+    }
+
     for (const pr of prs) {
       title = title.replace(new RegExp(`\\s*\\(#${pr.number}\\)`, 'g'), '')
     }
@@ -313,7 +342,7 @@ const generateRelease = async (args) => {
   // this doesnt work with majors but we dont do those very often
   const semverBump = commits.Features.length ? 'minor' : 'patch'
   const version = TAG_PREFIX + semver.parse(args.startTag).inc(semverBump).version
-  const date = args.endTag && exec(`git log -1 --date=short --format=%ad ${args.endTag}`)
+  const date = args.endTag ? exec(`git log -1 --date=short --format=%ad ${args.endTag}`) : today()
 
   const output = logger(RELEASE.title(version, date) + '\n')
 
@@ -338,7 +367,8 @@ const generateRelease = async (args) => {
         }
 
         output.group(groupCommit)
-        if (commit.body && commit.body.length) {
+        // only optionally add full commit bodies to changelog
+        if (commit.body && commit.body.length && args.format === 'long') {
           output.log(commit.body)
         }
         output.groupEnd()
@@ -350,6 +380,7 @@ const generateRelease = async (args) => {
   }
 
   return {
+    date,
     version,
     release: output.toString(),
   }
@@ -360,22 +391,30 @@ const main = async (argv) => {
 
   if (args.read) {
     // this reads the release notes for that version
-    let { release } = findRelease(args, args.endTag || args.startTag)
+    let { release } = findRelease(args, args.tag)
     if (args.type === 'gh') {
       // changelog was written in markdown so convert user links to gh release style
       // XXX: this needs to be changed if the `generateRelease` format changes
-      release = release.replace(/\(\[(@[a-z\d-]+)\]\(https:\/\/github.com\/[a-z\d-]+\)\)/g, '($1)')
+      release = release.replace(/\(\[(@[a-z\d-]+)\]\(https:\/\/github.com\/[a-z\d-]+\)\)/gi, '($1)')
     }
     return console.log(release)
   }
 
   // otherwise fetch the requested release from github
-  const { release, version } = await generateRelease(args)
-
-  let msg = 'Edit release notes and run:\n'
-  msg += `git add CHANGELOG.md && git commit -m 'chore: changelog for ${version}'`
+  const { release, version, date } = await generateRelease(args)
 
   if (args.write) {
+    // only try and run release manager issue update on write since that signals
+    // the first time we know the version of the release
+    try {
+      exec(
+        `node scripts/release-manager.js --update --version=${version.slice(1)} --date=${date}`, {
+          stdio: 'pipe',
+        })
+    } catch (e) {
+      console.error(`Updating release manager issue failed: ${e.stderr}`)
+    }
+
     const { release: existing, changelog } = findRelease(args, version)
     fs.writeFileSync(
       args.file,
@@ -386,14 +425,12 @@ const main = async (argv) => {
         : changelog.replace(RELEASE.h1, RELEASE.h1 + release + RELEASE.sep),
       'utf-8'
     )
-    return console.error([
-      `Release notes for ${version} written to "./${relative(process.cwd(), args.file)}".`,
-      msg,
-    ].join('\n'))
+    return console.log(
+      `Release notes for ${version} written to "./${relative(process.cwd(), args.file)}".`
+    )
   }
 
   console.log(release)
-  console.error('\n' + msg)
 }
 
 main(process.argv.slice(2))

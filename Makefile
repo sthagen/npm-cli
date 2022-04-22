@@ -24,9 +24,11 @@ misc_mandocs = $(shell find docs/content/using-npm -name '*.md' \
 
 mandocs = $(cli_mandocs) $(files_mandocs) $(misc_mandocs)
 
+markdown_docs = $(shell for file in $(find lib/commands -name '*.js'); do echo docs/content/commands/npm-$(basename $file .js).md; done)
+
 all: docs
 
-docs: mandocs htmldocs
+docs: mandocs htmldocs $(markdown_docs)
 
 # don't regenerate the snapshot if we're generating
 # snapshots, since presumably we just did that.
@@ -73,22 +75,28 @@ man/man7/%.7: docs/content/using-npm/%.md docs/bin/docs-build.js
 docs/content/using-npm/config.md: docs/bin/config-doc.js lib/utils/config/*.js
 	node docs/bin/config-doc.js
 
-docs/content/commands/npm-%.md: docs/bin/config-doc-command.js lib/commands/%.js lib/utils/config/*.js lib/utils/cmd-list.js
+mddocs: docs/bin/config-doc-command.js lib/utils/config/*.js lib/utils/cmd-list.js
+	@for file in $(shell find docs/content/commands -name 'npm-*.md'); do \
+		cmdname=$$(basename $$file .md) ;\
+		cmdname=$${cmdname##npm-} ;\
+		echo node docs/bin/config-doc-command.js $${file} lib/commands/$${cmdname}.js ;\
+		node docs/bin/config-doc-command.js $${file} lib/commands/$${cmdname}.js ;\
+	done
+
+docs/content/commands/npm-%.md: lib/commands/%.js
 	node docs/bin/config-doc-command.js $@ $<
 
 freshdocs:
 	touch lib/utils/config/definitions.js
-	touch "docs/bin/*.js"
+	touch docs/bin/*.js
 	make docs
+	make mddocs
 
-test: deps
-	node bin/npm-cli.js test
-
-smoke-tests: deps
-	node bin/npm-cli.js run smoke-tests
+test-all: deps
+	node bin/npm-cli.js run test-all
 
 ls-ok:
-	node . ls --production >/dev/null
+	node bin/npm-cli.js ls --omit=dev >/dev/null
 
 gitclean:
 	git clean -fd
@@ -100,11 +108,10 @@ link: uninstall
 	node bin/npm-cli.js link -f --ignore-scripts
 
 prune: deps
-	node bin/npm-cli.js prune --production --no-save --no-audit
-	@[[ "$(shell git status -s)" != "" ]] && echo "ERR: found unpruned files" && exit 1 || echo "git status is clean"
+	node bin/npm-cli.js prune --omit=dev --no-save --no-audit --no-fund
+	node scripts/git-dirty.js
 
-publish: gitclean ls-ok link test smoke-tests docs prune
-	@git push origin :v$(shell node bin/npm-cli.js --no-timing -v) 2>&1 || true
+publish: gitclean ls-ok link test-all docs prune
 	git push origin $(BRANCH) &&\
 	git push origin --tags &&\
 	node bin/npm-cli.js publish --tag=$(PUBLISHTAG)
@@ -112,4 +119,4 @@ publish: gitclean ls-ok link test smoke-tests docs prune
 release: gitclean ls-ok docs prune
 	@bash scripts/release.sh
 
-.PHONY: all latest install dev link docs clean uninstall test man docsclean release ls-ok deps prune freshdocs
+.PHONY: all latest install dev link docs mddocs clean uninstall test-all man docsclean release ls-ok deps prune freshdocs
