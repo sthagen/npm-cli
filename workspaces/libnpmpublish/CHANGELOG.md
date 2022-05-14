@@ -1,5 +1,43 @@
 # Changelog
 
+## [7.0.0](https://github.com/sthagen/npm-cli/compare/libnpmpublish-v6.0.4...libnpmpublish-v7.0.0) (2022-05-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **libnpmpublish:** the log option is no longer passed to the updated deps
+
+### Bug Fixes
+
+* **libnpmpublish:** remove superfluous argument ([#4463](https://github.com/sthagen/npm-cli/issues/4463)) ([d9b6378](https://github.com/sthagen/npm-cli/commit/d9b63784dbef50c5b3a7bd62ba5df1aaa45133fc))
+* **libnpmpublish:** unpublish from custom reg ([#4657](https://github.com/sthagen/npm-cli/issues/4657)) ([e9163b4](https://github.com/sthagen/npm-cli/commit/e9163b48d8e46a80d2a4cc98c492b94dfa152cb8))
+* **logout:** require proper auth.js from npm-registry-fetch ([90c384c](https://github.com/sthagen/npm-cli/commit/90c384ccccac32c80c481a04c438cbcbea82539c))
+* replace deprecated String.prototype.substr() ([#4667](https://github.com/sthagen/npm-cli/issues/4667)) ([e3da5df](https://github.com/sthagen/npm-cli/commit/e3da5df4152fbe547f7871547165328e1bf06262))
+* set proper workspace repo urls in package.json ([#4476](https://github.com/sthagen/npm-cli/issues/4476)) ([0cfc155](https://github.com/sthagen/npm-cli/commit/0cfc155db5f11ce23419e440111d99a63bf39754))
+* update readme badges ([#4658](https://github.com/sthagen/npm-cli/issues/4658)) ([2829cb2](https://github.com/sthagen/npm-cli/commit/2829cb28a432b5ff7beeeb3bf3e7e2e174c1121d))
+
+
+### Documentation
+
+* standardize changelog heading ([#4510](https://github.com/sthagen/npm-cli/issues/4510)) ([91f03ee](https://github.com/sthagen/npm-cli/commit/91f03ee618bc635f9cfbded735fe98bbfa9d643f))
+
+
+### Dependencies
+
+* @npmcli/template-oss@3.2.1 ([aac01b8](https://github.com/sthagen/npm-cli/commit/aac01b89caf6336a2eb34d696296303cdadd5c08))
+* @npmcli/template-oss@3.2.2 ([#4639](https://github.com/sthagen/npm-cli/issues/4639)) ([a59fd2c](https://github.com/sthagen/npm-cli/commit/a59fd2cb863245fce56f96c90ac854e62c5c4d6f))
+* cacache@16.0.1 ([f95396a](https://github.com/sthagen/npm-cli/commit/f95396a033b75e2a3e9aa83f0b06c527641027a4))
+* libnpmpack@4.0.0 ([8b1d963](https://github.com/sthagen/npm-cli/commit/8b1d9636ad2374254263d154f2b4ca8ea6416f4c))
+* libnpmpublish@6.0.0 ([67aed05](https://github.com/sthagen/npm-cli/commit/67aed05429163fc120e05e6fb15f8f3cd9c6ef22))
+* libnpmpublish@6.0.3 ([1617bce](https://github.com/sthagen/npm-cli/commit/1617bce61663a743435d162b003d3b99376d426f))
+* libnpmpublish@6.0.4 ([0ee57f1](https://github.com/sthagen/npm-cli/commit/0ee57f1492893da84686f4340feeb0469fb751f8))
+* **libnpmpublish:** update to latest major versions of npm deps ([b8f0829](https://github.com/sthagen/npm-cli/commit/b8f082950667d7f6aee46f13a958c465dd9d68f6))
+* normalize-package-data@4.0.0 ([b2a4942](https://github.com/sthagen/npm-cli/commit/b2a494283f45a25d1b87bc40bf2d68812871e89c))
+* npm-package-arg@9.0.1 ([9555a5f](https://github.com/sthagen/npm-cli/commit/9555a5f1d135aa1b8f7374273403efe41e99ee26))
+* npm-registry-fetch@12.0.1 ([1bfc507](https://github.com/sthagen/npm-cli/commit/1bfc507f2a5afa02f04d4dea2fc6d151d4fef3ac))
+* semver@7.3.7 ([c51e553](https://github.com/sthagen/npm-cli/commit/c51e553a32315e4f1b703ca9030eb7ade91d1a85))
+* ssri@9.0.0 ([a2781a3](https://github.com/sthagen/npm-cli/commit/a2781a367d62328d7f870de878f1b63d66593f4f))
+
 ### [6.0.4](https://github.com/npm/cli/compare/libnpmpublish-v6.0.3...libnpmpublish-v6.0.4) (2022-04-26)
 
 
