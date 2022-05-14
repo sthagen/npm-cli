@@ -1,5 +1,34 @@
 # Changelog
 
+## [9.0.0](https://github.com/sthagen/npm-cli/compare/libnpmhook-v8.0.3...libnpmhook-v9.0.0) (2022-05-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **libnpmhook:** the log option is no longer passed to the updated deps
+
+### Bug Fixes
+
+* **logout:** require proper auth.js from npm-registry-fetch ([90c384c](https://github.com/sthagen/npm-cli/commit/90c384ccccac32c80c481a04c438cbcbea82539c))
+* replace deprecated String.prototype.substr() ([#4667](https://github.com/sthagen/npm-cli/issues/4667)) ([e3da5df](https://github.com/sthagen/npm-cli/commit/e3da5df4152fbe547f7871547165328e1bf06262))
+* set proper workspace repo urls in package.json ([#4476](https://github.com/sthagen/npm-cli/issues/4476)) ([0cfc155](https://github.com/sthagen/npm-cli/commit/0cfc155db5f11ce23419e440111d99a63bf39754))
+* update readme badges ([#4658](https://github.com/sthagen/npm-cli/issues/4658)) ([2829cb2](https://github.com/sthagen/npm-cli/commit/2829cb28a432b5ff7beeeb3bf3e7e2e174c1121d))
+
+
+### Documentation
+
+* standardize changelog heading ([#4510](https://github.com/sthagen/npm-cli/issues/4510)) ([91f03ee](https://github.com/sthagen/npm-cli/commit/91f03ee618bc635f9cfbded735fe98bbfa9d643f))
+
+
+### Dependencies
+
+* @npmcli/template-oss@3.2.1 ([aac01b8](https://github.com/sthagen/npm-cli/commit/aac01b89caf6336a2eb34d696296303cdadd5c08))
+* @npmcli/template-oss@3.2.2 ([#4639](https://github.com/sthagen/npm-cli/issues/4639)) ([a59fd2c](https://github.com/sthagen/npm-cli/commit/a59fd2cb863245fce56f96c90ac854e62c5c4d6f))
+* libnpmhook@8.0.0 ([1dab298](https://github.com/sthagen/npm-cli/commit/1dab29805c820f82e4bae18123e911fec6948dfd))
+* libnpmhook@8.0.3 ([7ed9faf](https://github.com/sthagen/npm-cli/commit/7ed9fafaa951071a7988a3ec4ca3a5e01756b11d))
+* **libnpmhook:** update to latest major versions of npm deps ([78f4a01](https://github.com/sthagen/npm-cli/commit/78f4a013c6e577714bda6851fb69a39c873571af))
+* npm-registry-fetch@12.0.1 ([1bfc507](https://github.com/sthagen/npm-cli/commit/1bfc507f2a5afa02f04d4dea2fc6d151d4fef3ac))
+
 ### [8.0.3](https://github.com/npm/cli/compare/libnpmhook-v8.0.2...libnpmhook-v8.0.3) (2022-04-06)
 
 
