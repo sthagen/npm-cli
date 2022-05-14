@@ -1,5 +1,35 @@
 # Changelog
 
+## [7.0.0](https://github.com/sthagen/npm-cli/compare/libnpmaccess-v6.0.3...libnpmaccess-v7.0.0) (2022-05-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **libnpmaccess:** the log option is no longer passed to the updated deps
+
+### Bug Fixes
+
+* **logout:** require proper auth.js from npm-registry-fetch ([90c384c](https://github.com/sthagen/npm-cli/commit/90c384ccccac32c80c481a04c438cbcbea82539c))
+* set proper workspace repo urls in package.json ([#4476](https://github.com/sthagen/npm-cli/issues/4476)) ([0cfc155](https://github.com/sthagen/npm-cli/commit/0cfc155db5f11ce23419e440111d99a63bf39754))
+* update readme badges ([#4658](https://github.com/sthagen/npm-cli/issues/4658)) ([2829cb2](https://github.com/sthagen/npm-cli/commit/2829cb28a432b5ff7beeeb3bf3e7e2e174c1121d))
+
+
+### Documentation
+
+* standardize changelog heading ([#4510](https://github.com/sthagen/npm-cli/issues/4510)) ([91f03ee](https://github.com/sthagen/npm-cli/commit/91f03ee618bc635f9cfbded735fe98bbfa9d643f))
+
+
+### Dependencies
+
+* @npmcli/template-oss@3.2.1 ([aac01b8](https://github.com/sthagen/npm-cli/commit/aac01b89caf6336a2eb34d696296303cdadd5c08))
+* @npmcli/template-oss@3.2.2 ([#4639](https://github.com/sthagen/npm-cli/issues/4639)) ([a59fd2c](https://github.com/sthagen/npm-cli/commit/a59fd2cb863245fce56f96c90ac854e62c5c4d6f))
+* cacache@16.0.1 ([f95396a](https://github.com/sthagen/npm-cli/commit/f95396a033b75e2a3e9aa83f0b06c527641027a4))
+* libnpmaccess@6.0.0 ([77399cb](https://github.com/sthagen/npm-cli/commit/77399cb988d984133bfc2885a6407ffc56b9152d))
+* libnpmaccess@6.0.3 ([8914864](https://github.com/sthagen/npm-cli/commit/891486451f1c34a2e7649b0a76c6c0d611ce3d39))
+* **libnpmaccess:** update to latest major versions of npm deps ([381d0e1](https://github.com/sthagen/npm-cli/commit/381d0e14df19371ce0ddee3eef66ac96169e7d46))
+* npm-package-arg@9.0.1 ([9555a5f](https://github.com/sthagen/npm-cli/commit/9555a5f1d135aa1b8f7374273403efe41e99ee26))
+* npm-registry-fetch@12.0.1 ([1bfc507](https://github.com/sthagen/npm-cli/commit/1bfc507f2a5afa02f04d4dea2fc6d151d4fef3ac))
+
 ### [6.0.3](https://github.com/npm/cli/compare/libnpmaccess-v6.0.2...libnpmaccess-v6.0.3) (2022-04-06)
 
 
