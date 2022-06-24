@@ -1,5 +1,20 @@
 # Changelog
 
+## [4.0.8](https://github.com/npm/cli/compare/libnpmexec-v4.0.7...libnpmexec-v4.0.8) (2022-06-23)
+
+
+### Dependencies
+
+* @npmcli/run-script@4.1.3 ([#5064](https://github.com/npm/cli/issues/5064)) ([f59a114](https://github.com/npm/cli/commit/f59a114ffe3d1f86ccb2e52a4432292ab76852cc))
+
+## [4.0.7](https://github.com/npm/cli/compare/libnpmexec-v4.0.6...libnpmexec-v4.0.7) (2022-06-22)
+
+
+### Dependencies
+
+* @npmcli/run-script@4.1.0 ([2c06cee](https://github.com/npm/cli/commit/2c06ceee82dd813c0ae84cc0b09e6941cfc5533e))
+* pacote@13.6.1 ([2e50cb8](https://github.com/npm/cli/commit/2e50cb83e84cf25fee93ba0ca5a0343fbdb33c41))
+
 ### [4.0.6](https://github.com/npm/cli/compare/libnpmexec-v4.0.5...libnpmexec-v4.0.6) (2022-06-01)
 
 

@@ -1,5 +1,44 @@
 # Changelog
 
+## v8.13.1 (2022-06-23)
+
+### Dependencies
+
+  * [`f59a114`](https://github.com/npm/cli/commit/f59a114ffe3d1f86ccb2e52a4432292ab76852cc) [#5064](https://github.com/npm/cli/pull/5064) deps: `@npmcli/run-script@4.1.3`
+    * fix: improves escaping of arguments for run-script, exec and npx ([@nlf](https://github.com/nlf))
+  * [`236b4a2`](https://github.com/npm/cli/commit/236b4a21046c4cb43a1aaa8bde09f4cec2aa1fb6) [#5069](https://github.com/npm/cli/pull/5069) deps: `libnpmpack@4.1.2`
+  * [`0a6664d`](https://github.com/npm/cli/commit/0a6664d285b300f26764efaa2798a5b6045b95a1) [#5070](https://github.com/npm/cli/pull/5070) deps: `@npmcli/arborist@5.2.3`
+  * [`9f94049`](https://github.com/npm/cli/commit/9f94049f058687b916da726ea625b5fa68d0829d) [#5071](https://github.com/npm/cli/pull/5071) deps: `libnpmexec@4.0.8`
+  * [`8212363`](https://github.com/npm/cli/commit/8212363280f02c10f38e22c2dcd7e2abdf8bec35) [#5072](https://github.com/npm/cli/pull/5072) deps: `libnpmversion@3.0.6`
+
+## v8.13.0 (2022-06-22)
+
+### Features
+
+  * [`06fd788`](https://github.com/npm/cli/commit/06fd788f79e16da04d6e96aa56416cd2698f057a) [#4960](https://github.com/npm/cli/pull/4960) feat: prompt before opening web-login URL when performing `login`/`adduser` ([@jumoel](https://github.com/jumoel))
+
+### Bug Fixes
+
+  * [`e03009f`](https://github.com/npm/cli/commit/e03009f4b423e85e498f1b1851fae785de91a73d) [#5042](https://github.com/npm/cli/pull/5042) fix: Add space to SemVer log message ([@dnicolson](https://github.com/dnicolson))
+  * [`2953983`](https://github.com/npm/cli/commit/2953983ad5c5e830a5844be5d6d0a2b49863c05d) [#5035](https://github.com/npm/cli/pull/5035) fix(view): error on missing version ([@wraithgar](https://github.com/wraithgar))
+
+### Documentation
+
+  * [`69b5a96`](https://github.com/npm/cli/commit/69b5a9674e8c03219c3da088b35b8ec6dea69770) [#5048](https://github.com/npm/cli/pull/5048) docs: consolidate docs and help for package spec ([@wraithgar](https://github.com/wraithgar))
+  * [`facba42`](https://github.com/npm/cli/commit/facba42bcd2a10722788f44de13ea46cde6c8e71) [#5030](https://github.com/npm/cli/pull/5030) docs: fix typo ([@westy92](https://github.com/westy92))
+
+### Dependencies
+
+  * [`2e50cb8`](https://github.com/npm/cli/commit/2e50cb83e84cf25fee93ba0ca5a0343fbdb33c41) [#5049](https://github.com/npm/cli/pull/5049) deps: `pacote@13.6.1`
+  * [`2c06cee`](https://github.com/npm/cli/commit/2c06ceee82dd813c0ae84cc0b09e6941cfc5533e) [#5049](https://github.com/npm/cli/pull/5049) deps: `@npmcli/run-script@4.1.0`
+  * [`61112f7`](https://github.com/npm/cli/commit/61112f718efd1dd31e56c98321b721692e19f032) [#5044](https://github.com/npm/cli/pull/5044) deps: `make-fetch-happen@10.1.8`
+  * [`01eef03`](https://github.com/npm/cli/commit/01eef035cf3c14136fc68da09b05b2ff9d73f2e1) [#5034](https://github.com/npm/cli/pull/5034) deps: `npm-profile@6.1.0`
+  * [`afa10c7`](https://github.com/npm/cli/commit/afa10c747e44bc6fa12cfeb3ece7a8e25ac4beae) [#5063](https://github.com/npm/cli/pull/5063) deps: `libnpmdiff@4.0.4`
+  * [`a5be4d6`](https://github.com/npm/cli/commit/a5be4d612ff1ce2b31e2246cf17308652e804ce1) [#5062](https://github.com/npm/cli/pull/5062) deps: `libnpmversion@3.0.5`
+  * [`3ea332b`](https://github.com/npm/cli/commit/3ea332b1cbc24c82c1ee7523b4fb37d295d47243) [#5061](https://github.com/npm/cli/pull/5061) deps: `libnpmpack@4.1.1`
+  * [`14a08d6`](https://github.com/npm/cli/commit/14a08d6ceb57130a2e4bdbad74ebf4944c92890e) [#5060](https://github.com/npm/cli/pull/5060) deps: `libnpmexec@4.0.7`
+  * [`1ab9776`](https://github.com/npm/cli/commit/1ab9776b5db12d2fd14bf379ce0ae715a49a68fa) [#5059](https://github.com/npm/cli/pull/5059) deps: `@npmcli/arborist@5.2.2`
+
 ## v8.12.2 (2022-06-15)
 
 ### Dependencies

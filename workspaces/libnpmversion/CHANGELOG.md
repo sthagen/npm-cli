@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.0.6](https://github.com/npm/cli/compare/libnpmversion-v3.0.5...libnpmversion-v3.0.6) (2022-06-23)
+
+
+### Dependencies
+
+* @npmcli/run-script@4.1.3 ([#5064](https://github.com/npm/cli/issues/5064)) ([f59a114](https://github.com/npm/cli/commit/f59a114ffe3d1f86ccb2e52a4432292ab76852cc))
+
+## [3.0.5](https://github.com/npm/cli/compare/libnpmversion-v3.0.4...libnpmversion-v3.0.5) (2022-06-22)
+
+
+### Dependencies
+
+* @npmcli/run-script@4.1.0 ([2c06cee](https://github.com/npm/cli/commit/2c06ceee82dd813c0ae84cc0b09e6941cfc5533e))
+
 ### [3.0.4](https://github.com/npm/cli/compare/libnpmversion-v3.0.3...libnpmversion-v3.0.4) (2022-04-26)
 
 
