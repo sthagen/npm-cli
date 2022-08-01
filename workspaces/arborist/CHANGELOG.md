@@ -1,5 +1,76 @@
 # Changelog
 
+## [5.4.0](https://github.com/sthagen/npm-cli/compare/arborist-v5.3.1...arborist-v5.4.0) (2022-08-01)
+
+
+### Features
+
+* add flag --omit-lockfile-registry-resolved ([#4874](https://github.com/sthagen/npm-cli/issues/4874)) ([bfb8bcc](https://github.com/sthagen/npm-cli/commit/bfb8bccbe83753e527b43c8a3889696087dbe8f1))
+* add npm query cmd ([#5000](https://github.com/sthagen/npm-cli/issues/5000)) ([3c024ac](https://github.com/sthagen/npm-cli/commit/3c024ace60904c69e61da00e1fb56c0c1735804a))
+* **arborist:** add support for dependencies script ([#5094](https://github.com/sthagen/npm-cli/issues/5094)) ([e9b4214](https://github.com/sthagen/npm-cli/commit/e9b4214e1ddb1ad79fe6826cf2ce7ba385f0c274))
+* **arborist:** add support for installLinks ([0ebadf5](https://github.com/sthagen/npm-cli/commit/0ebadf5b603368557e9e837a46ea5c59c2677a81))
+
+
+### Bug Fixes
+
+* Add space to SemVer log message ([#5042](https://github.com/sthagen/npm-cli/issues/5042)) ([e03009f](https://github.com/sthagen/npm-cli/commit/e03009f4b423e85e498f1b1851fae785de91a73d))
+* allow hash character in paths ([#5122](https://github.com/sthagen/npm-cli/issues/5122)) ([62b95a0](https://github.com/sthagen/npm-cli/commit/62b95a04337661e3fa17093708b57000054442d9))
+* **arborist:** _findMissingEdges missing dependency due to inconsistent path separators ([#4261](https://github.com/sthagen/npm-cli/issues/4261)) ([0e7511d](https://github.com/sthagen/npm-cli/commit/0e7511d144bdb6624e4c0fdfb31b4b42ed2954c9))
+* **arborist:** dont skip adding advisories to audit based on name/range ([aa4a4da](https://github.com/sthagen/npm-cli/commit/aa4a4da336a6ec1963394fdbd06acb173c842d26)), closes [#4681](https://github.com/sthagen/npm-cli/issues/4681)
+* **arborist:** handle link nodes in old lockfiles correctly ([6f9cb49](https://github.com/sthagen/npm-cli/commit/6f9cb490e7299976c43c6a118036c130671fe188))
+* **arborist:** identify and repair invalid nodes in the virtual tree ([bd96ae4](https://github.com/sthagen/npm-cli/commit/bd96ae4071f9cc8a65e741f414db12e98537971d))
+* **arborist:** link deps lifecycle scripts ([#4875](https://github.com/sthagen/npm-cli/issues/4875)) ([5a50762](https://github.com/sthagen/npm-cli/commit/5a50762faa37ae5964ae6f12595b20b367056c0a))
+* **arborist:** make sure resolveParent exists before checking props ([18b8b94](https://github.com/sthagen/npm-cli/commit/18b8b94357d8f57301fbaa0f1e5dc2cf1128bf3e))
+* **arborist:** pass the edge to fromPath in order to determine correct path ([#5233](https://github.com/sthagen/npm-cli/issues/5233)) ([050284d](https://github.com/sthagen/npm-cli/commit/050284d2abb6aa91a0f9ffad5b0c4f074e5dbf6d))
+* **arborist:** save workspace version ([#4578](https://github.com/sthagen/npm-cli/issues/4578)) ([e9a2981](https://github.com/sthagen/npm-cli/commit/e9a2981f55f84ff521ef597883a4e732d08ce1c1))
+* **arborist:** use rawSpec for bundled and shrinkwrapped deps ([#4963](https://github.com/sthagen/npm-cli/issues/4963)) ([646b6b5](https://github.com/sthagen/npm-cli/commit/646b6b5d05de937beb8202e5fd8b8daf3e58e902))
+* **arborist:** use the sourceReference root rather than the node root for overrides ([#5227](https://github.com/sthagen/npm-cli/issues/5227)) ([47cc95d](https://github.com/sthagen/npm-cli/commit/47cc95d9ffb37fc8ff62a1d5554eab16d303aa43)), closes [#4395](https://github.com/sthagen/npm-cli/issues/4395)
+* **arborist:** when reloading an edge, also refresh overrides ([4d676e3](https://github.com/sthagen/npm-cli/commit/4d676e31a68f081b8553eff4e79db1f29acf47e1))
+* **arborist:** when replacing a Link with a Node, make sure to remove the Link target from the root ([3d96494](https://github.com/sthagen/npm-cli/commit/3d964940f410052918e37a9b05818fe9dc4cd86a))
+* make sure we loadOverrides on the root node in loadVirtual() ([99d8845](https://github.com/sthagen/npm-cli/commit/99d88454248f950b82652b592fe2b4d019c1060b))
+* only call npmlog progress methods if explicitly requested ([#4644](https://github.com/sthagen/npm-cli/issues/4644)) ([668ec7f](https://github.com/sthagen/npm-cli/commit/668ec7f33b7a76f5e86a59f7e5a6c0e068a242b1)), closes [#3314](https://github.com/sthagen/npm-cli/issues/3314)
+* **rebuild:** don't run lifecycle scripts twice on linked deps ([#4529](https://github.com/sthagen/npm-cli/issues/4529)) ([fbdb431](https://github.com/sthagen/npm-cli/commit/fbdb43138ab8e682efb7668767465e7066d43b9f))
+* replace deprecated String.prototype.substr() ([#4667](https://github.com/sthagen/npm-cli/issues/4667)) ([e3da5df](https://github.com/sthagen/npm-cli/commit/e3da5df4152fbe547f7871547165328e1bf06262))
+* update readme badges ([#4658](https://github.com/sthagen/npm-cli/issues/4658)) ([2829cb2](https://github.com/sthagen/npm-cli/commit/2829cb28a432b5ff7beeeb3bf3e7e2e174c1121d))
+
+
+### Documentation
+
+* standardize changelog heading ([#4510](https://github.com/sthagen/npm-cli/issues/4510)) ([91f03ee](https://github.com/sthagen/npm-cli/commit/91f03ee618bc635f9cfbded735fe98bbfa9d643f))
+
+
+### Dependencies
+
+* @npmcli/arborist@5.0.4 ([679e569](https://github.com/sthagen/npm-cli/commit/679e569d5778aef312b37c1ba3bda0171366c9fb))
+* @npmcli/arborist@5.0.5 ([c70232c](https://github.com/sthagen/npm-cli/commit/c70232cc12fd9b3b024c2c759edd708af2367b8d))
+* @npmcli/arborist@5.0.6 ([42dc0b0](https://github.com/sthagen/npm-cli/commit/42dc0b03d60dc27602dab26a2f8cbfc17bf4ab40))
+* @npmcli/arborist@5.1.1 ([36899d1](https://github.com/sthagen/npm-cli/commit/36899d193b8e8ee6019b04aa5e6a3a9a641a3172))
+* @npmcli/arborist@5.2.0 ([f9984e6](https://github.com/sthagen/npm-cli/commit/f9984e64e714937fa69f14850a1d3ed7ccfc934c))
+* @npmcli/arborist@5.2.1 ([180a7e4](https://github.com/sthagen/npm-cli/commit/180a7e4647ded3d3bca5cd9a2fa8d264b7d2104a))
+* @npmcli/arborist@5.2.2 ([1ab9776](https://github.com/sthagen/npm-cli/commit/1ab9776b5db12d2fd14bf379ce0ae715a49a68fa))
+* @npmcli/arborist@5.2.3 ([0a6664d](https://github.com/sthagen/npm-cli/commit/0a6664d285b300f26764efaa2798a5b6045b95a1))
+* @npmcli/arborist@5.3.0 ([cb0db7c](https://github.com/sthagen/npm-cli/commit/cb0db7c3fd1d0a4c30db9f44e9ea9e69ec327fe8))
+* @npmcli/arborist@5.3.1 ([3bbb293](https://github.com/sthagen/npm-cli/commit/3bbb2931d09df66186108760353b2992171b057f))
+* @npmcli/map-workspaces@2.0.3 ([3f2b24a](https://github.com/sthagen/npm-cli/commit/3f2b24afe205547dbbadf5a6313e95f6b565fb49))
+* @npmcli/metavuln-calculator@3.0.1 ([fcc6acf](https://github.com/sthagen/npm-cli/commit/fcc6acfa808aa556748544edf4e9b73262f77608))
+* @npmcli/move-file@2.0.0 ([e9b25cd](https://github.com/sthagen/npm-cli/commit/e9b25cd66bef17e807a84e7b10384f5f4d0064b7))
+* @npmcli/node-gyp@2.0.0 ([0e87cac](https://github.com/sthagen/npm-cli/commit/0e87cac8b6f09692f6bd1bf086aadbe323d127b5))
+* @npmcli/package-json@2.0.0 ([4a9a705](https://github.com/sthagen/npm-cli/commit/4a9a705de6992a3e9eefecc6c0cf8da45a527c7a))
+* @npmcli/run-script@4.1.0 ([2c06cee](https://github.com/sthagen/npm-cli/commit/2c06ceee82dd813c0ae84cc0b09e6941cfc5533e))
+* @npmcli/run-script@4.1.3 ([#5064](https://github.com/sthagen/npm-cli/issues/5064)) ([f59a114](https://github.com/sthagen/npm-cli/commit/f59a114ffe3d1f86ccb2e52a4432292ab76852cc))
+* @npmcli/template-oss@3.2.1 ([aac01b8](https://github.com/sthagen/npm-cli/commit/aac01b89caf6336a2eb34d696296303cdadd5c08))
+* @npmcli/template-oss@3.2.2 ([#4639](https://github.com/sthagen/npm-cli/issues/4639)) ([a59fd2c](https://github.com/sthagen/npm-cli/commit/a59fd2cb863245fce56f96c90ac854e62c5c4d6f))
+* cacache@16.0.0 ([e26548f](https://github.com/sthagen/npm-cli/commit/e26548fb12a3bb23fbe32a336f1305e083aa51c0))
+* cacache@16.0.1 ([f95396a](https://github.com/sthagen/npm-cli/commit/f95396a033b75e2a3e9aa83f0b06c527641027a4))
+* cacache@16.0.6 ([532883f](https://github.com/sthagen/npm-cli/commit/532883ffc35fc1cc9aec09f03bf5ee0f256b94a4))
+* npm-install-checks@5.0.0 ([ad99360](https://github.com/sthagen/npm-cli/commit/ad9936063f20829eb9d5358d056593883f17a57b))
+* npmlog@6.0.2 ([5e31322](https://github.com/sthagen/npm-cli/commit/5e313223100db1207818d756b081eaba3468b273))
+* pacote@13.0.5 ([340fa51](https://github.com/sthagen/npm-cli/commit/340fa51f423a518a96c8015a67d8f6144a2e8051))
+* pacote@13.6.1 ([2e50cb8](https://github.com/sthagen/npm-cli/commit/2e50cb83e84cf25fee93ba0ca5a0343fbdb33c41))
+* semver@7.3.7 ([c51e553](https://github.com/sthagen/npm-cli/commit/c51e553a32315e4f1b703ca9030eb7ade91d1a85))
+* ssri@9.0.0 ([a2781a3](https://github.com/sthagen/npm-cli/commit/a2781a367d62328d7f870de878f1b63d66593f4f))
+* treeverse@2.0.0 ([1a90b9e](https://github.com/sthagen/npm-cli/commit/1a90b9e9ebe98cce83591e11312aaf41c830f835))
+
 ## [5.3.1](https://github.com/npm/cli/compare/arborist-v5.3.0...arborist-v5.3.1) (2022-07-27)
 
 
