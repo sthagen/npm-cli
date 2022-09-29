@@ -217,11 +217,8 @@ exit code.
 
 #### `auth-type`
 
-* Default: "legacy"
-* Type: "legacy", "web", "sso", "saml", "oauth", or "webauthn"
-
-NOTE: auth-type values "sso", "saml", "oauth", and "webauthn" will be
-removed in a future version.
+* Default: "web"
+* Type: "legacy" or "web"
 
 What authentication strategy to use with `login`.
 
@@ -1710,12 +1707,11 @@ particular, use care when overriding this setting for public packages.
 * Default: false
 * Type: Boolean
 
-If true, writes a debug log to `logs-dir` and timing information to
-`_timing.json` in the cache, even if the command completes successfully.
-`_timing.json` is a newline delimited list of JSON objects.
+If true, writes timing information to a process specific json file in the
+cache or `logs-dir`. The file name ends with `-timing.json`.
 
 You can quickly view it with this [json](https://npm.im/json) command line:
-`npm exec -- json -g < ~/.npm/_timing.json`.
+`cat ~/.npm/_logs/*-timing.json | npm exec -- json -g`.
 
 <!-- automatically generated, do not edit manually -->
 <!-- see lib/utils/config/definitions.js -->
@@ -2080,31 +2076,6 @@ Alias for `--omit=dev`
 * DEPRECATED: Use the --package-lock setting instead.
 
 Alias for --package-lock
-
-<!-- automatically generated, do not edit manually -->
-<!-- see lib/utils/config/definitions.js -->
-
-#### `sso-poll-frequency`
-
-* Default: 500
-* Type: Number
-* DEPRECATED: The --auth-type method of SSO/SAML/OAuth will be removed in a
-  future version of npm in favor of web-based login.
-
-When used with SSO-enabled `auth-type`s, configures how regularly the
-registry should be polled while the user is completing authentication.
-
-<!-- automatically generated, do not edit manually -->
-<!-- see lib/utils/config/definitions.js -->
-
-#### `sso-type`
-
-* Default: "oauth"
-* Type: null, "oauth", or "saml"
-* DEPRECATED: The --auth-type method of SSO/SAML/OAuth will be removed in a
-  future version of npm in favor of web-based login.
-
-If `--auth-type=sso`, the type of SSO type to use.
 
 <!-- automatically generated, do not edit manually -->
 <!-- see lib/utils/config/definitions.js -->
