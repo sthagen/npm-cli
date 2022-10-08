@@ -336,8 +336,7 @@ exports[`test/lib/utils/config/definitions.js TAP > config description for cache
 * Default: Windows: \`%LocalAppData%\\npm-cache\`, Posix: \`~/.npm\`
 * Type: Path
 
-The location of npm's cache directory. See [\`npm
-cache\`](/commands/npm-cache)
+The location of npm's cache directory.
 `
 
 exports[`test/lib/utils/config/definitions.js TAP > config description for cache-max 1`] = `
@@ -981,9 +980,9 @@ exports[`test/lib/utils/config/definitions.js TAP > config description for insta
 * Default: true
 * Type: Boolean
 
-When set file: protocol dependencies that exist outside of the project root
-will be packed and installed as regular dependencies instead of creating a
-symlink. This option has no effect on workspaces.
+When set file: protocol dependencies will be packed and installed as regular
+dependencies instead of creating a symlink. This option has no effect on
+workspaces.
 `
 
 exports[`test/lib/utils/config/definitions.js TAP > config description for json 1`] = `
@@ -1090,8 +1089,8 @@ instead of the current working directory. See
 exports[`test/lib/utils/config/definitions.js TAP > config description for lockfile-version 1`] = `
 #### \`lockfile-version\`
 
-* Default: Version 2 if no lockfile or current lockfile version less than or
-  equal to 2, otherwise maintain current lockfile version
+* Default: Version 3 if no lockfile, auto-converting v1 lockfiles to v3,
+  otherwise maintain current lockfile version.
 * Type: null, 1, 2, 3, "1", "2", or "3"
 
 Set the lockfile format version to be used in package-lock.json and
@@ -1102,9 +1101,9 @@ is used during the install, resulting in slower and possibly less
 deterministic installs. Prevents lockfile churn when interoperating with
 older npm versions.
 
-2: The default lockfile version used by npm version 7. Includes both the
-version 1 lockfile data and version 3 lockfile data, for maximum determinism
-and interoperability, at the expense of more bytes on disk.
+2: The default lockfile version used by npm version 7 and 8. Includes both
+the version 1 lockfile data and version 3 lockfile data, for maximum
+determinism and interoperability, at the expense of more bytes on disk.
 
 3: Only the new lockfile information introduced in npm version 7. Smaller on
 disk than lockfile version 2, but not interoperable with older npm versions.
