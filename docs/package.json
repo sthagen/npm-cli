@@ -22,18 +22,17 @@
   "dependencies": {
     "@isaacs/string-locale-compare": "^1.1.0",
     "@mdx-js/mdx": "^1.6.22",
-    "@npmcli/fs": "^2.1.0",
     "cmark-gfm": "^0.9.0",
     "front-matter": "^4.0.2",
-    "ignore-walk": "^5.0.1",
+    "ignore-walk": "^6.0.0",
     "jsdom": "^20.0.1",
     "marked-man": "^0.7.0",
     "mkdirp": "^1.0.4",
     "yaml": "^2.1.3"
   },
   "devDependencies": {
-    "@npmcli/eslint-config": "^3.1.0",
-    "@npmcli/template-oss": "4.5.1",
+    "@npmcli/eslint-config": "^4.0.0",
+    "@npmcli/template-oss": "4.6.2",
     "tap": "^16.0.1"
   },
   "author": "GitHub Inc.",
@@ -56,7 +55,7 @@
     "//@npmcli/template-oss": "This file is partially managed by @npmcli/template-oss. Edits may be overwritten.",
     "ciVersions": "latest",
     "engines": "^14.17.0 || ^16.13.0 || >=18.0.0",
-    "version": "4.5.1",
+    "version": "4.6.2",
     "content": "../scripts/template-oss/index.js"
   }
 }

@@ -1,6 +1,6 @@
 const t = require('tap')
 const { resolve, dirname, join } = require('path')
-const fs = require('@npmcli/fs')
+const fs = require('fs')
 
 const { load: loadMockNpm } = require('../fixtures/mock-npm.js')
 const mockGlobals = require('../fixtures/mock-globals')
@@ -448,7 +448,7 @@ t.test('debug log', async t => {
     const logsDir = join(testdir, 'my_logs_dir')
 
     // make logs dir a file before load so it files
-    await fs.writeFile(logsDir, 'A_TEXT_FILE')
+    fs.writeFileSync(logsDir, 'A_TEXT_FILE')
     await t.resolves(npm.load(), 'loads with invalid logs dir')
 
     t.equal(npm.logFiles.length, 0, 'no log files array')
@@ -534,11 +534,26 @@ t.test('timings', async t => {
 
   t.test('does not write timings file with timers:false', async t => {
     const { npm, timingFile } = await loadMockNpm(t, {
-      config: { false: true },
+      config: { timing: false },
     })
     npm.writeTimingFile()
     await t.rejects(() => timingFile())
   })
+
+  const timingDisplay = [
+    [{ loglevel: 'silly' }, true, false],
+    [{ loglevel: 'silly', timing: true }, true, true],
+    [{ loglevel: 'silent', timing: true }, false, false],
+  ]
+
+  for (const [config, expectedDisplay, expectedTiming] of timingDisplay) {
+    const msg = `${JSON.stringify(config)}, display:${expectedDisplay}, timing:${expectedTiming}`
+    await t.test(`timing display: ${msg}`, async t => {
+      const { display } = await loadMockNpm(t, { config })
+      t.equal(!!display.length, expectedDisplay, 'display')
+      t.equal(!!display.timing.length, expectedTiming, 'timing display')
+    })
+  }
 })
 
 t.test('output clears progress and console.logs the message', async t => {

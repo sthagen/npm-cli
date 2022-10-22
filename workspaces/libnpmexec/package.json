@@ -1,6 +1,6 @@
 {
   "name": "libnpmexec",
-  "version": "5.0.0-pre.4",
+  "version": "5.0.0",
   "files": [
     "bin/",
     "lib/"
@@ -50,32 +50,30 @@
     ]
   },
   "devDependencies": {
-    "@npmcli/eslint-config": "^3.1.0",
-    "@npmcli/template-oss": "4.5.1",
-    "bin-links": "^3.0.3",
+    "@npmcli/eslint-config": "^4.0.0",
+    "@npmcli/template-oss": "4.6.2",
+    "bin-links": "^4.0.1",
     "minify-registry-metadata": "^2.2.0",
     "mkdirp": "^1.0.4",
     "tap": "^16.0.1"
   },
   "dependencies": {
-    "@npmcli/arborist": "^6.0.0-pre.4",
+    "@npmcli/arborist": "^6.0.0",
     "@npmcli/ci-detect": "^3.0.0",
-    "@npmcli/fs": "^2.1.1",
-    "@npmcli/run-script": "^4.2.0",
+    "@npmcli/run-script": "^5.0.0",
     "chalk": "^4.1.0",
-    "mkdirp-infer-owner": "^2.0.0",
-    "npm-package-arg": "^9.0.1",
-    "npmlog": "^6.0.2",
-    "pacote": "^14.0.0",
-    "proc-log": "^2.0.0",
+    "npm-package-arg": "^10.0.0",
+    "npmlog": "^7.0.1",
+    "pacote": "^15.0.2",
+    "proc-log": "^3.0.0",
     "read": "^1.0.7",
-    "read-package-json-fast": "^2.0.2",
+    "read-package-json-fast": "^3.0.1",
     "semver": "^7.3.7",
     "walk-up-path": "^1.0.0"
   },
   "templateOSS": {
     "//@npmcli/template-oss": "This file is partially managed by @npmcli/template-oss. Edits may be overwritten.",
-    "version": "4.5.1",
+    "version": "4.6.2",
     "content": "../../scripts/template-oss/index.js"
   }
 }
