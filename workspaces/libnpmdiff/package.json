@@ -1,6 +1,6 @@
 {
   "name": "libnpmdiff",
-  "version": "5.0.1",
+  "version": "5.0.2",
   "description": "The registry diff",
   "repository": {
     "type": "git",
@@ -43,11 +43,11 @@
   },
   "devDependencies": {
     "@npmcli/eslint-config": "^4.0.0",
-    "@npmcli/template-oss": "4.6.2",
+    "@npmcli/template-oss": "4.8.0",
     "tap": "^16.0.1"
   },
   "dependencies": {
-    "@npmcli/arborist": "^6.1.0",
+    "@npmcli/arborist": "^6.1.1",
     "@npmcli/disparity-colors": "^3.0.0",
     "@npmcli/installed-package-contents": "^2.0.0",
     "binary-extensions": "^2.2.0",
@@ -59,7 +59,7 @@
   },
   "templateOSS": {
     "//@npmcli/template-oss": "This file is partially managed by @npmcli/template-oss. Edits may be overwritten.",
-    "version": "4.6.2",
+    "version": "4.8.0",
     "content": "../../scripts/template-oss/index.js"
   },
   "tap": {

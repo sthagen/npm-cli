@@ -93,8 +93,8 @@ const exec = async (...args) => {
     env: {
       HOME: path,
       PATH: `${PATH}:${binLocation}`,
+      COMSPEC: process.env.COMSPEC,
     },
-    stdioString: true,
     encoding: 'utf-8',
   })
 
