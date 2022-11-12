@@ -1,5 +1,5 @@
 {
-  "name": "smoke-tests",
+  "name": "@npmcli/smoke-tests",
   "description": "The npm cli smoke tests",
   "version": "1.0.0",
   "private": true,
@@ -19,24 +19,26 @@
   },
   "devDependencies": {
     "@npmcli/eslint-config": "^4.0.0",
+    "@npmcli/mock-registry": "^1.0.0",
     "@npmcli/promise-spawn": "^6.0.1",
-    "@npmcli/template-oss": "4.8.0",
-    "minify-registry-metadata": "^2.2.0",
-    "rimraf": "^3.0.2",
+    "@npmcli/template-oss": "4.10.0",
+    "http-proxy": "^1.18.1",
+    "just-extend": "^6.1.1",
+    "just-safe-set": "^4.1.1",
     "tap": "^16.0.1",
-    "which": "^2.0.2"
+    "which": "^3.0.0"
   },
   "author": "GitHub Inc.",
   "license": "ISC",
   "templateOSS": {
     "//@npmcli/template-oss": "This file is partially managed by @npmcli/template-oss. Edits may be overwritten.",
-    "version": "4.8.0",
+    "version": "4.10.0",
     "content": "../scripts/template-oss/index.js"
   },
   "tap": {
     "no-coverage": true,
-    "timeout": 300,
-    "files": "test/index.js",
+    "timeout": 600,
+    "test-ignore": "fixtures/*",
     "nyc-arg": [
       "--exclude",
       "tap-snapshots/**"

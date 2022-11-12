@@ -8,6 +8,7 @@ on:
     paths-ignore:
       - docs/**
       - smoke-tests/**
+      - mock-registry/**
       - workspaces/**
   push:
     branches:
@@ -16,6 +17,7 @@ on:
     paths-ignore:
       - docs/**
       - smoke-tests/**
+      - mock-registry/**
       - workspaces/**
   schedule:
     # "At 09:00 UTC (02:00 PT) on Monday" https://crontab.guru/#0_9_*_*_1
