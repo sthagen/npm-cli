@@ -4,7 +4,7 @@ const { mkdir } = require('fs/promises')
 const { promisify } = require('util')
 
 const Arborist = require('@npmcli/arborist')
-const ciDetect = require('@npmcli/ci-detect')
+const ciInfo = require('ci-info')
 const crypto = require('crypto')
 const log = require('proc-log')
 const npa = require('npm-package-arg')
@@ -110,7 +110,7 @@ const exec = async (opts) => {
     return run()
   }
 
-  const needPackageCommandSwap = (args.length > 0) && (packages.length === 0)
+  let needPackageCommandSwap = (args.length > 0) && (packages.length === 0)
   // If they asked for a command w/o specifying a package, see if there is a
   // bin that directly matches that name:
   // - in the local package itself
@@ -126,9 +126,11 @@ const exec = async (opts) => {
     if (localManifest?.bin?.[args[0]]) {
       // we have to install the local package into the npx cache so that its
       // bin links get set up
+      flatOptions.installLinks = false
+      // args[0] will exist when the package is installed
       packages.push(path)
       yes = true
-      flatOptions.installLinks = false
+      needPackageCommandSwap = false
     } else {
       const dir = dirname(dirname(localBin))
       const localBinPath = await localFileExists(dir, args[0], '/')
@@ -242,7 +244,7 @@ const exec = async (opts) => {
           throw new Error('canceled')
         }
 
-        if (noTTY() || ciDetect()) {
+        if (noTTY() || ciInfo.isCI) {
           log.warn('exec', `The following package${
             add.length === 1 ? ' was' : 's were'
           } not found and will be installed: ${
