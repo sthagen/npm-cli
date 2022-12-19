@@ -20,6 +20,7 @@ graph LR;
   libnpmaccess-->npm-package-arg;
   libnpmaccess-->npm-registry-fetch;
   libnpmaccess-->npmcli-eslint-config["@npmcli/eslint-config"];
+  libnpmaccess-->npmcli-mock-registry["@npmcli/mock-registry"];
   libnpmaccess-->npmcli-template-oss["@npmcli/template-oss"];
   libnpmdiff-->npm-package-arg;
   libnpmdiff-->npmcli-arborist["@npmcli/arborist"];
@@ -57,11 +58,11 @@ graph LR;
   libnpmpack-->npmcli-run-script["@npmcli/run-script"];
   libnpmpack-->npmcli-template-oss["@npmcli/template-oss"];
   libnpmpack-->pacote;
-  libnpmpublish-->libnpmpack;
   libnpmpublish-->normalize-package-data;
   libnpmpublish-->npm-package-arg;
   libnpmpublish-->npm-registry-fetch;
   libnpmpublish-->npmcli-eslint-config["@npmcli/eslint-config"];
+  libnpmpublish-->npmcli-mock-registry["@npmcli/mock-registry"];
   libnpmpublish-->npmcli-template-oss["@npmcli/template-oss"];
   libnpmpublish-->semver;
   libnpmpublish-->ssri;
@@ -336,6 +337,7 @@ graph LR;
   libnpmaccess-->npm-package-arg;
   libnpmaccess-->npm-registry-fetch;
   libnpmaccess-->npmcli-eslint-config["@npmcli/eslint-config"];
+  libnpmaccess-->npmcli-mock-registry["@npmcli/mock-registry"];
   libnpmaccess-->npmcli-template-oss["@npmcli/template-oss"];
   libnpmaccess-->tap;
   libnpmdiff-->binary-extensions;
@@ -397,13 +399,13 @@ graph LR;
   libnpmpack-->pacote;
   libnpmpack-->spawk;
   libnpmpack-->tap;
-  libnpmpublish-->libnpmpack;
   libnpmpublish-->lodash.clonedeep;
   libnpmpublish-->nock;
   libnpmpublish-->normalize-package-data;
   libnpmpublish-->npm-package-arg;
   libnpmpublish-->npm-registry-fetch;
   libnpmpublish-->npmcli-eslint-config["@npmcli/eslint-config"];
+  libnpmpublish-->npmcli-mock-registry["@npmcli/mock-registry"];
   libnpmpublish-->npmcli-template-oss["@npmcli/template-oss"];
   libnpmpublish-->semver;
   libnpmpublish-->ssri;
@@ -546,7 +548,6 @@ graph LR;
   npm-->remark-gfm;
   npm-->remark-github;
   npm-->remark;
-  npm-->rimraf;
   npm-->semver;
   npm-->spawk;
   npm-->ssri;
@@ -776,11 +777,11 @@ Each group depends on packages lower down the chain, nothing depends on
 packages higher up the chain.
 
  - npm
- - @npmcli/smoke-tests, libnpmexec, libnpmpublish
+ - @npmcli/smoke-tests, libnpmaccess, libnpmexec, libnpmpublish
  - @npmcli/mock-registry, libnpmdiff, libnpmfund, libnpmpack
  - @npmcli/arborist
  - @npmcli/metavuln-calculator
- - pacote, libnpmaccess, libnpmhook, libnpmorg, libnpmsearch, libnpmteam, npm-profile
+ - pacote, libnpmhook, libnpmorg, libnpmsearch, libnpmteam, npm-profile
  - npm-registry-fetch, libnpmversion
  - @npmcli/git, make-fetch-happen, @npmcli/config, init-package-json
  - @npmcli/installed-package-contents, @npmcli/map-workspaces, cacache, npm-pick-manifest, @npmcli/run-script, read-package-json, promzard
