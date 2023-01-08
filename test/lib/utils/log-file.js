@@ -4,10 +4,11 @@ const fs = _fs.promises
 const path = require('path')
 const os = require('os')
 const fsMiniPass = require('fs-minipass')
+const tmock = require('../../fixtures/tmock')
 const LogFile = require('../../../lib/utils/log-file.js')
 const { cleanCwd, cleanDate } = require('../../fixtures/clean-snapshot')
 
-t.cleanSnapshot = (path) => cleanDate(cleanCwd(path))
+t.cleanSnapshot = (s) => cleanDate(cleanCwd(s))
 
 const getId = (d = new Date()) => d.toISOString().replace(/[.:]/g, '_')
 const last = arr => arr[arr.length - 1]
@@ -42,7 +43,7 @@ const cleanErr = (message) => {
 const loadLogFile = async (t, { buffer = [], mocks, testdir = {}, ...options } = {}) => {
   const root = t.testdir(testdir)
 
-  const MockLogFile = t.mock('../../../lib/utils/log-file.js', mocks)
+  const MockLogFile = tmock(t, '{LIB}/utils/log-file.js', mocks)
   const logFile = new MockLogFile(Object.keys(options).length ? options : undefined)
 
   buffer.forEach((b) => logFile.log(...b))
