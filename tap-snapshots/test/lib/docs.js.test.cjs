@@ -604,8 +604,8 @@ safer to use a registry-provided authentication bearer token stored in the
   current level
 * Type: null, "restricted", or "public"
 
-If do not want your scoped package to be publicly viewable (and installable)
-set \`--access=restricted\`.
+If you do not want your scoped package to be publicly viewable (and
+installable) set \`--access=restricted\`.
 
 Unscoped packages can not be set to \`restricted\`.
 
@@ -654,7 +654,8 @@ exit code.
 * Default: "web"
 * Type: "legacy" or "web"
 
-What authentication strategy to use with \`login\`.
+What authentication strategy to use with \`login\`. Note that if an \`otp\`
+config is given, this value will always be set to \`legacy\`.
 
 #### \`before\`
 
@@ -1702,7 +1703,7 @@ be resolved using the nearest non-peer dependency specification, even if
 doing so will result in some packages receiving a peer dependency outside
 the range set in their package's \`peerDependencies\` object.
 
-When such and override is performed, a warning is printed, explaining the
+When such an override is performed, a warning is printed, explaining the
 conflict and the packages involved. If \`--strict-peer-deps\` is set, then
 this warning is treated as a failure.
 
@@ -1983,7 +1984,7 @@ Alias for \`--include=dev\`.
   \`--install-strategy=shallow\`
 
 Only install direct dependencies in the top level \`node_modules\`, but hoist
-on deeper dependendencies. Sets \`--install-strategy=shallow\`.
+on deeper dependencies. Sets \`--install-strategy=shallow\`.
 
 #### \`init.author.email\`
 
@@ -3138,7 +3139,7 @@ exports[`test/lib/docs.js TAP usage init > must match snapshot 1`] = `
 Create a package.json file
 
 Usage:
-npm init <package-spec> (same as \`npx <package-spec>)
+npm init <package-spec> (same as \`npx <package-spec>\`)
 npm init <@scope> (same as \`npx <@scope>/create\`)
 
 Options:
@@ -3151,7 +3152,7 @@ aliases: create, innit
 Run "npm help init" for more info
 
 \`\`\`bash
-npm init <package-spec> (same as \`npx <package-spec>)
+npm init <package-spec> (same as \`npx <package-spec>\`)
 npm init <@scope> (same as \`npx <@scope>/create\`)
 
 aliases: create, innit
