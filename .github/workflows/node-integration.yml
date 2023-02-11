@@ -13,6 +13,11 @@ on:
         required: true
         type: string
         default: git
+      installFlags:
+        description: 'extra flags to pass to npm install'
+        required: false
+        type: string
+        default: ''
 
   workflow_dispatch:
     inputs:
@@ -26,6 +31,11 @@ on:
         required: true
         type: string
         default: git
+      installFlags:
+        description: 'extra flags to pass to npm install'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   build-nodejs:
@@ -237,8 +247,13 @@ jobs:
       - name: generate matrix
         id: generate-matrix
         uses: actions/github-script@v6
+        env:
+          NODE_VERSION: "${{ inputs.nodeVersion }}"
+          INSTALL_FLAGS: "${{ inputs.installFlags }}"
         with:
           script: |
+            const { NODE_VERSION, INSTALL_FLAGS } = process.env
+
             const { execSync } = require('child_process')
             const npa = require('npm-package-arg')
 
@@ -264,11 +279,22 @@ jobs:
               'https-proxy-agent', // looks ssl related
               'node-gyp', // one test consistently times out
               'resolve', // compares results to require.resolve and fails, also missing inspector/promises
-              'serialport', // esbuild barfs on node 20.0.0-pre
-              'undici', // test failure in node >=19, unable to root cause
               'uuid', // tests that crypto.getRandomValues throws but it doesn't
               'weak', // doesn't seem to build in node >12
+              'mkdirp', // failing actions in own repo
+              'undici', // test failure in node >=18, unable to root cause
             ]
+
+            if (NODE_VERSION === '18') {
+              knownFailures.push('multer')
+            } else if (NODE_VERSION === '19') {
+              // empty block
+            } else if (NODE_VERSION === 'nightly') {
+              // fails in node 20, looks like a streams issue
+              knownFailures.push('fastify')
+              // esbuild barfs on node 20.0.0-pre
+              knownFailures.push('serialport')
+            }
 
             // this is a manually updated list of packages that are flaky
             const supplementalFlaky = [
@@ -288,6 +314,9 @@ jobs:
               const install_flags = ['--no-audit', '--no-fund']
               if (meta.install) {
                 install_flags.push(meta.install.slice(1))
+              }
+              if (INSTALL_FLAGS) {
+                install_flags.push(INSTALL_FLAGS)
               }
               const context = JSON.parse(execSync(`npm show ${package} --json`))
               const test = meta.scripts ? meta.scripts.map((script) => `npm run ${script}`) : ['npm test']
@@ -391,11 +420,8 @@ jobs:
           if [[ -f "package-lock.json" ]]; then
             newLockfileVersion=$(cat "package-lock.json" | jq .lockfileVersion)
             if [[ "$newLockfileVersion" -ne "${{ steps.download.outputs.lockfileVersion }}" ]]; then
-              logMessage="lockfileVersion changed from ${{ steps.download.outputs.lockfileVersion }} to $newLockfileVersion"
-              if [[ "${{ steps.download.outputs.lockfileVersion }}" -eq 1 ]]; then
-                echo "::warning ::$logMessage"
-              else
-                echo "::error ::$logMessage"
+              if [[ "${{ steps.download.outputs.lockfileVersion }}" -ne 1 ]]; then
+                echo "::error ::lockfileVersion changed from ${{ steps.download.outputs.lockfileVersion }} to $newLockfileVersion"
                 exit 1
               fi
             fi
@@ -406,6 +432,9 @@ jobs:
         run: |
           npm ls
       - name: ${{ join(matrix.commands, ' && ') }}
+        id: command
+        continue-on-error: true
+        timeout-minutes: 10
         env: ${{ matrix.env }}
         working-directory: ${{ steps.download.outputs.target }}
         if: ${{ steps.npm-install.outputs.failed != 'true' }}
@@ -454,3 +483,10 @@ jobs:
             echo "::endgroup::"
           done
           exit $FINALEXIT
+      - name: Set conclusion
+        run: |
+          EXIT=1
+          if [[ "${{ steps.command.outcome }}" == "success" || "${{ matrix.flaky }}" == "true" || "${{ matrix.knownFailure }}" == "true" ]]; then
+            EXIT=0
+          fi
+          exit $EXIT
