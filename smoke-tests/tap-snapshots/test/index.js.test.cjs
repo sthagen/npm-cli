@@ -24,12 +24,13 @@ All commands:
     access, adduser, audit, bugs, cache, ci, completion,
     config, dedupe, deprecate, diff, dist-tag, docs, doctor,
     edit, exec, explain, explore, find-dupes, fund, get, help,
-    hook, init, install, install-ci-test, install-test, link,
-    ll, login, logout, ls, org, outdated, owner, pack, ping,
-    pkg, prefix, profile, prune, publish, query, rebuild, repo,
-    restart, root, run-script, search, set, shrinkwrap, star,
-    stars, start, stop, team, test, token, uninstall, unpublish,
-    unstar, update, version, view, whoami
+    help-search, hook, init, install, install-ci-test,
+    install-test, link, ll, login, logout, ls, org, outdated,
+    owner, pack, ping, pkg, prefix, profile, prune, publish,
+    query, rebuild, repo, restart, root, run-script, search,
+    set, shrinkwrap, star, stars, start, stop, team, test,
+    token, uninstall, unpublish, unstar, update, version, view,
+    whoami
 
 Specify configs in the ini-formatted file:
     {NPM}/{TESTDIR}/project/.npmrc
@@ -67,8 +68,7 @@ npm ERR! aliases: clean-install, ic, install-clean, isntall-clean
 npm ERR! 
 npm ERR! Run "npm help ci" for more info
 
-npm ERR! A complete log of this run can be found in:
-
+npm ERR! A complete log of this run can be found in: {NPM}/{TESTDIR}/cache/_logs/{LOG}
 `
 
 exports[`test/index.js TAP basic npm diff > should have expected diff output 1`] = `
