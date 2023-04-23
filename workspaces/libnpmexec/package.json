@@ -1,6 +1,6 @@
 {
   "name": "libnpmexec",
-  "version": "5.0.15",
+  "version": "5.0.16",
   "files": [
     "bin/",
     "lib/"
@@ -60,7 +60,7 @@
     "tap": "^16.3.4"
   },
   "dependencies": {
-    "@npmcli/arborist": "^6.2.7",
+    "@npmcli/arborist": "^6.2.8",
     "@npmcli/run-script": "^6.0.0",
     "chalk": "^4.1.0",
     "ci-info": "^3.7.1",
@@ -71,7 +71,7 @@
     "read": "^2.0.0",
     "read-package-json-fast": "^3.0.2",
     "semver": "^7.3.7",
-    "walk-up-path": "^1.0.0"
+    "walk-up-path": "^3.0.1"
   },
   "templateOSS": {
     "//@npmcli/template-oss": "This file is partially managed by @npmcli/template-oss. Edits may be overwritten.",

@@ -6,14 +6,10 @@ bin-links
 cacache
 cli
 cmd-shim
-config
 create-oss
-dezalgo
 disparity-colors
-doctornpm
 documentation
 eslint-config
-exec
 fs
 fs-minipass
 gauge
@@ -21,8 +17,6 @@ git
 graphec
 hosted-git-info
 ignore-walk
-infer-owner
-inflight
 ini
 init-package-json
 installed-package-contents
@@ -32,13 +26,11 @@ map-workspaces
 metavuln-calculator
 minify-registry-metadata
 minipass-fetch
-move-file
 mute-stream
 name-from-folder
-nock-registry
+node
 node-gyp
 node-semver
-node-tar
 node-which
 nopt
 normalize-package-data
@@ -53,7 +45,6 @@ npm-packlist
 npm-pick-manifest
 npm-profile
 npm-registry-fetch
-npm-registry-mock
 npm-user-validate
 npmlog
 package-json
@@ -68,7 +59,7 @@ read
 read-cmd-shim
 read-package-json
 read-package-json-fast
-readdir-scoped-modules
+release-please
 rfcs
 run-script
 ssri
@@ -76,9 +67,7 @@ stafftools
 statusboard
 tap-nock
 template-oss
-treeverse
 unique-filename
 unique-slug
 validate-npm-package-name
-wrappy
 write-file-atomic
