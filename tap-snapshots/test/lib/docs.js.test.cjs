@@ -332,16 +332,6 @@ npm exec --package yo --package generator-node --call "yo node"
 \`\`\`
 
 
-#### \`ci-name\`
-
-* Default: The name of the current CI system, or \`null\` when not on a known CI
-  platform.
-* Type: null or String
-
-The name of a continuous integration system. If not set explicitly, npm will
-detect the current CI environment using the
-[\`ci-info\`](http://npm.im/ci-info) module.
-
 #### \`cidr\`
 
 * Default: null
@@ -979,8 +969,6 @@ The package or packages to install for [\`npm exec\`](/commands/npm-exec)
 If set to false, then ignore \`package-lock.json\` files when installing. This
 will also prevent _writing_ \`package-lock.json\` if \`save\` is true.
 
-This configuration does not affect \`npm ci\`.
-
 #### \`package-lock-only\`
 
 * Default: false
@@ -1556,6 +1544,18 @@ cert="-----BEGIN CERTIFICATE-----\\nXXXX\\nXXXX\\n-----END CERTIFICATE-----"
 It is _not_ the path to a certificate file, though you can set a
 registry-scoped "certfile" path like
 "//other-registry.tld/:certfile=/path/to/cert.pem".
+
+#### \`ci-name\`
+
+* Default: The name of the current CI system, or \`null\` when not on a known CI
+  platform.
+* Type: null or String
+* DEPRECATED: This config is deprecated and will not be changeable in future
+  version of npm.
+
+The name of a continuous integration system. If not set explicitly, npm will
+detect the current CI environment using the
+[\`ci-info\`](http://npm.im/ci-info) module.
 
 #### \`dev\`
 
@@ -2213,8 +2213,8 @@ npm ci
 Options:
 [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
 [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
-[--strict-peer-deps] [--no-package-lock] [--foreground-scripts]
-[--ignore-scripts] [--no-audit] [--no-bin-links] [--no-fund] [--dry-run]
+[--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]
+[--no-bin-links] [--no-fund] [--dry-run]
 [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
 [-ws|--workspaces] [--include-workspace-root] [--install-links]
 
@@ -2233,7 +2233,6 @@ aliases: clean-install, ic, install-clean, isntall-clean
 #### \`global-style\`
 #### \`omit\`
 #### \`strict-peer-deps\`
-#### \`package-lock\`
 #### \`foreground-scripts\`
 #### \`ignore-scripts\`
 #### \`audit\`
@@ -2809,8 +2808,8 @@ npm install-ci-test
 Options:
 [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
 [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
-[--strict-peer-deps] [--no-package-lock] [--foreground-scripts]
-[--ignore-scripts] [--no-audit] [--no-bin-links] [--no-fund] [--dry-run]
+[--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]
+[--no-bin-links] [--no-fund] [--dry-run]
 [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
 [-ws|--workspaces] [--include-workspace-root] [--install-links]
 
@@ -2829,7 +2828,6 @@ aliases: cit, clean-install-test, sit
 #### \`global-style\`
 #### \`omit\`
 #### \`strict-peer-deps\`
-#### \`package-lock\`
 #### \`foreground-scripts\`
 #### \`ignore-scripts\`
 #### \`audit\`
