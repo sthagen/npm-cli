@@ -24,7 +24,7 @@ All commands:
     
 
 Specify configs in the ini-formatted file:
-    /some/config/file/.npmrc
+    {USERCONFIG}
 or on the command line via: npm <command> --key=value
 
 More configuration info: npm help config
@@ -163,6 +163,10 @@ Array [
   "view",
   "whoami",
 ]
+`
+
+exports[`test/lib/docs.js TAP command list > deref 1`] = `
+Function deref(c)
 `
 
 exports[`test/lib/docs.js TAP config > all definitions 1`] = `
@@ -991,6 +995,14 @@ For \`list\` this means the output will be based on the tree described by the
 Output parseable results from commands that write to standard output. For
 \`npm search\`, this will be tab-separated table format.
 
+#### \`prefer-dedupe\`
+
+* Default: false
+* Type: Boolean
+
+Prefer to deduplicate packages if possible, rather than choosing a newer
+version of a dependency.
+
 #### \`prefer-offline\`
 
 * Default: false
@@ -1802,6 +1814,7 @@ Array [
   "package-lock-only",
   "pack-destination",
   "parseable",
+  "prefer-dedupe",
   "prefer-offline",
   "prefer-online",
   "prefix",
@@ -1938,6 +1951,7 @@ Array [
   "package-lock-only",
   "pack-destination",
   "parseable",
+  "prefer-dedupe",
   "prefer-offline",
   "prefer-online",
   "preid",
@@ -2638,6 +2652,9 @@ Get a value from the npm configuration
 Usage:
 npm get [<key> ...] (See \`npm config\`)
 
+Options:
+[-l|--long]
+
 Run "npm help get" for more info
 
 \`\`\`bash
@@ -2646,7 +2663,7 @@ npm get [<key> ...] (See \`npm config\`)
 
 Note: This command is unaware of workspaces.
 
-NO PARAMS
+#### \`long\`
 `
 
 exports[`test/lib/docs.js TAP usage help > must match snapshot 1`] = `
@@ -2763,7 +2780,7 @@ Options:
 [-E|--save-exact] [-g|--global]
 [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
 [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
-[--strict-peer-deps] [--no-package-lock] [--foreground-scripts]
+[--strict-peer-deps] [--prefer-dedupe] [--no-package-lock] [--foreground-scripts]
 [--ignore-scripts] [--no-audit] [--no-bin-links] [--no-fund] [--dry-run]
 [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
 [-ws|--workspaces] [--include-workspace-root] [--install-links]
@@ -2786,6 +2803,7 @@ aliases: add, i, in, ins, inst, insta, instal, isnt, isnta, isntal, isntall
 #### \`global-style\`
 #### \`omit\`
 #### \`strict-peer-deps\`
+#### \`prefer-dedupe\`
 #### \`package-lock\`
 #### \`foreground-scripts\`
 #### \`ignore-scripts\`
@@ -2851,7 +2869,7 @@ Options:
 [-E|--save-exact] [-g|--global]
 [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
 [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
-[--strict-peer-deps] [--no-package-lock] [--foreground-scripts]
+[--strict-peer-deps] [--prefer-dedupe] [--no-package-lock] [--foreground-scripts]
 [--ignore-scripts] [--no-audit] [--no-bin-links] [--no-fund] [--dry-run]
 [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
 [-ws|--workspaces] [--include-workspace-root] [--install-links]
@@ -2874,6 +2892,7 @@ alias: it
 #### \`global-style\`
 #### \`omit\`
 #### \`strict-peer-deps\`
+#### \`prefer-dedupe\`
 #### \`package-lock\`
 #### \`foreground-scripts\`
 #### \`ignore-scripts\`
@@ -3531,6 +3550,9 @@ Set a value in the npm configuration
 Usage:
 npm set <key>=<value> [<key>=<value> ...] (See \`npm config\`)
 
+Options:
+[-g|--global] [-L|--location <global|user|project>]
+
 Run "npm help set" for more info
 
 \`\`\`bash
@@ -3539,7 +3561,8 @@ npm set <key>=<value> [<key>=<value> ...] (See \`npm config\`)
 
 Note: This command is unaware of workspaces.
 
-NO PARAMS
+#### \`global\`
+#### \`location\`
 `
 
 exports[`test/lib/docs.js TAP usage shrinkwrap > must match snapshot 1`] = `
@@ -3729,6 +3752,7 @@ npm uninstall [<@scope>/]<pkg>...
 
 Options:
 [-S|--save|--no-save|--save-prod|--save-dev|--save-optional|--save-peer|--save-bundle]
+[-g|--global]
 [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
 [-ws|--workspaces] [--include-workspace-root] [--install-links]
 
@@ -3743,6 +3767,7 @@ aliases: unlink, remove, rm, r, un
 \`\`\`
 
 #### \`save\`
+#### \`global\`
 #### \`workspace\`
 #### \`workspaces\`
 #### \`include-workspace-root\`
