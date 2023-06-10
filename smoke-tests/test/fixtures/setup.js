@@ -9,7 +9,7 @@ const httpProxy = require('http-proxy')
 
 const { SMOKE_PUBLISH_NPM, SMOKE_PUBLISH_TARBALL, CI, PATH, Path, TAP_CHILD_ID = '0' } = process.env
 const PROXY_PORT = 12345 + (+TAP_CHILD_ID)
-const HTTP_PROXY = `http://localhost:${PROXY_PORT}`
+const HTTP_PROXY = `http://localhost:${PROXY_PORT}/`
 
 const NODE_PATH = process.execPath
 const CLI_ROOT = resolve(process.cwd(), '..')
@@ -19,6 +19,14 @@ const NPM_PATH = join(CLI_ROOT, CLI_JS_BIN)
 const WINDOWS = process.platform === 'win32'
 const GLOBAL_BIN = WINDOWS ? '' : 'bin'
 const GLOBAL_NODE_MODULES = join(WINDOWS ? '' : 'lib', 'node_modules')
+
+const getOpts = (...a) => {
+  const [opts, args] = a.reduce((acc, arg) => {
+    acc[typeof arg === 'object' ? 0 : 1].push(arg)
+    return acc
+  }, [[], []])
+  return [Object.assign({}, ...opts), args]
+}
 
 const normalizePath = path => path.replace(/[A-Z]:/, '').replace(/\\/g, '/')
 
@@ -64,12 +72,13 @@ const getCleanPaths = async () => {
   })
 }
 
-const createRegistry = async (t, { debug } = {}) => {
+const createRegistry = async (t, { debug, ...opts } = {}) => {
   const registry = new MockRegistry({
     tap: t,
     registry: 'http://smoke-test-registry.club/',
     debug,
     strict: true,
+    ...opts,
   })
 
   const proxy = httpProxy.createProxyServer({})
@@ -81,7 +90,7 @@ const createRegistry = async (t, { debug } = {}) => {
   return registry
 }
 
-module.exports = async (t, { testdir = {}, debug } = {}) => {
+module.exports = async (t, { testdir = {}, debug, registry: _registry = {} } = {}) => {
   const debugLog = debug || CI ? (...a) => console.error(...a) : () => {}
   const cleanPaths = await getCleanPaths()
 
@@ -105,7 +114,7 @@ module.exports = async (t, { testdir = {}, debug } = {}) => {
     globalNodeModules: join(root, 'global', GLOBAL_NODE_MODULES),
   }
 
-  const registry = await createRegistry(t, { debug })
+  const registry = await createRegistry(t, { ..._registry, debug })
 
   // update notifier should never be written
   t.afterEach((t) => {
@@ -168,8 +177,10 @@ module.exports = async (t, { testdir = {}, debug } = {}) => {
     return stdout
   }
 
-  const baseNpm = async ({ cwd, cmd, argv = [], proxy = true, ...opts } = {}, ...args) => {
-    const isGlobal = args.some(a => ['-g', '--global', '--global=true'].includes(a))
+  const baseNpm = async (...a) => {
+    const [{ cwd, cmd, argv = [], proxy = true, ...opts }, args] = getOpts(...a)
+
+    const isGlobal = args.some(arg => ['-g', '--global', '--global=true'].includes(arg))
 
     const defaultFlags = [
       proxy ? `--registry=${HTTP_PROXY}` : null,
@@ -199,20 +210,26 @@ module.exports = async (t, { testdir = {}, debug } = {}) => {
     })
   }
 
-  const npmLocal = (...args) => baseNpm({
-    cwd: CLI_ROOT,
-    cmd: process.execPath,
-    argv: ['.'],
-    proxy: false,
-  }, ...args)
+  const npmLocal = async (...args) => {
+    const [{ force = false }] = getOpts(...args)
+    if (SMOKE_PUBLISH_NPM && !force) {
+      throw new Error('npmLocal cannot be called during smoke-publish')
+    }
+    return baseNpm({
+      cwd: CLI_ROOT,
+      cmd: process.execPath,
+      argv: ['.'],
+      proxy: false,
+    }, ...args)
+  }
 
-  const npmPath = (...args) => baseNpm({
+  const npmPath = async (...args) => baseNpm({
     cwd: paths.project,
     cmd: 'npm',
     shell: true,
   }, ...args)
 
-  const npm = (...args) => baseNpm({
+  const npm = async (...args) => baseNpm({
     cwd: paths.project,
     cmd: process.execPath,
     argv: [NPM_PATH],
@@ -226,15 +243,15 @@ module.exports = async (t, { testdir = {}, debug } = {}) => {
 
   return {
     npmPath,
-    npmLocal: SMOKE_PUBLISH_NPM ? async () => {
-      throw new Error('npmLocal cannot be called during smoke-publish')
-    } : npmLocal,
+    npmLocal,
     npm: SMOKE_PUBLISH_NPM ? npmPath : npm,
     spawn: baseSpawn,
     readFile,
     getPath,
     paths,
     registry,
+    npmLocalTarball: async () => SMOKE_PUBLISH_TARBALL ??
+      npmLocal('pack', `--pack-destination=${root}`).then(r => join(root, r)),
   }
 }
 
@@ -244,3 +261,4 @@ module.exports.CLI_ROOT = CLI_ROOT
 module.exports.WINDOWS = WINDOWS
 module.exports.SMOKE_PUBLISH = !!SMOKE_PUBLISH_NPM
 module.exports.SMOKE_PUBLISH_TARBALL = SMOKE_PUBLISH_TARBALL
+module.exports.HTTP_PROXY = HTTP_PROXY
