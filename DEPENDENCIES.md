@@ -82,6 +82,7 @@ graph LR;
   libnpmversion-->semver;
   make-fetch-happen-->cacache;
   make-fetch-happen-->minipass-fetch;
+  make-fetch-happen-->npmcli-agent["@npmcli/agent"];
   make-fetch-happen-->ssri;
   nopt-->abbrev;
   normalize-package-data-->hosted-git-info;
@@ -259,8 +260,6 @@ graph LR;
 ```mermaid
 graph LR;
   agent-base-->debug;
-  agentkeepalive-->debug;
-  agentkeepalive-->depd;
   agentkeepalive-->humanize-ms;
   aggregate-error-->clean-stack;
   aggregate-error-->indent-string;
@@ -460,6 +459,7 @@ graph LR;
   make-fetch-happen-->minipass-pipeline;
   make-fetch-happen-->minipass;
   make-fetch-happen-->negotiator;
+  make-fetch-happen-->npmcli-agent["@npmcli/agent"];
   make-fetch-happen-->promise-retry;
   make-fetch-happen-->socks-proxy-agent;
   make-fetch-happen-->ssri;
@@ -565,7 +565,7 @@ graph LR;
   npm-->remark-github;
   npm-->remark;
   npm-->semver;
-  npm-->sigstore;
+  npm-->sigstore-tuf["@sigstore/tuf"];
   npm-->spawk;
   npm-->ssri;
   npm-->supports-color;
@@ -598,6 +598,10 @@ graph LR;
   npm-registry-fetch-->minizlib;
   npm-registry-fetch-->npm-package-arg;
   npm-registry-fetch-->proc-log;
+  npmcli-agent-->http-proxy-agent;
+  npmcli-agent-->https-proxy-agent;
+  npmcli-agent-->lru-cache;
+  npmcli-agent-->socks-proxy-agent;
   npmcli-arborist-->benchmark;
   npmcli-arborist-->bin-links;
   npmcli-arborist-->cacache;
@@ -765,9 +769,14 @@ graph LR;
   rimraf-->glob;
   semver-->lru-cache;
   shebang-command-->shebang-regex;
-  sigstore-->make-fetch-happen;
+  sigstore-->sigstore-bundle["@sigstore/bundle"];
   sigstore-->sigstore-protobuf-specs["@sigstore/protobuf-specs"];
+  sigstore-->sigstore-sign["@sigstore/sign"];
   sigstore-->sigstore-tuf["@sigstore/tuf"];
+  sigstore-bundle-->sigstore-protobuf-specs["@sigstore/protobuf-specs"];
+  sigstore-sign-->make-fetch-happen;
+  sigstore-sign-->sigstore-bundle["@sigstore/bundle"];
+  sigstore-sign-->sigstore-protobuf-specs["@sigstore/protobuf-specs"];
   sigstore-tuf-->sigstore-protobuf-specs["@sigstore/protobuf-specs"];
   sigstore-tuf-->tuf-js;
   socks-->ip;
@@ -826,6 +835,6 @@ packages higher up the chain.
  - pacote, libnpmhook, libnpmorg, libnpmsearch, libnpmteam, npm-profile
  - npm-registry-fetch, @npmcli/package-json, libnpmversion
  - @npmcli/git, make-fetch-happen, @npmcli/config, init-package-json
- - @npmcli/installed-package-contents, @npmcli/map-workspaces, cacache, npm-pick-manifest, @npmcli/run-script, read-package-json, promzard
- - @npmcli/docs, @npmcli/fs, npm-bundled, read-package-json-fast, unique-filename, npm-install-checks, npm-package-arg, npm-packlist, normalize-package-data, bin-links, nopt, npmlog, parse-conflict-json, @npmcli/mock-globals, read
- - @npmcli/eslint-config, @npmcli/template-oss, ignore-walk, semver, npm-normalize-package-bin, @npmcli/name-from-folder, json-parse-even-better-errors, fs-minipass, ssri, unique-slug, @npmcli/promise-spawn, hosted-git-info, proc-log, validate-npm-package-name, @npmcli/node-gyp, minipass-fetch, @npmcli/query, cmd-shim, read-cmd-shim, write-file-atomic, abbrev, are-we-there-yet, gauge, minify-registry-metadata, ini, @npmcli/disparity-colors, mute-stream, npm-audit-report, npm-user-validate
+ - npm-pick-manifest, @npmcli/installed-package-contents, @npmcli/run-script, cacache, read-package-json, @npmcli/map-workspaces, promzard
+ - @npmcli/docs, npm-package-arg, npm-install-checks, npm-bundled, read-package-json-fast, @npmcli/fs, unique-filename, npm-packlist, normalize-package-data, @npmcli/mock-globals, bin-links, nopt, npmlog, parse-conflict-json, read
+ - @npmcli/eslint-config, @npmcli/template-oss, ignore-walk, semver, hosted-git-info, proc-log, validate-npm-package-name, @npmcli/promise-spawn, npm-normalize-package-bin, @npmcli/node-gyp, json-parse-even-better-errors, fs-minipass, ssri, unique-slug, @npmcli/agent, minipass-fetch, @npmcli/name-from-folder, @npmcli/query, cmd-shim, read-cmd-shim, write-file-atomic, abbrev, are-we-there-yet, gauge, minify-registry-metadata, ini, @npmcli/disparity-colors, mute-stream, npm-audit-report, npm-user-validate

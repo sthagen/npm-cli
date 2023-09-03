@@ -1,5 +1,17 @@
 # Changelog
 
+## [7.1.0](https://github.com/npm/cli/compare/config-v7.0.1...config-v7.1.0) (2023-08-31)
+
+### Features
+
+* [`fb31c7e`](https://github.com/npm/cli/commit/fb31c7e5f00ae39e67f9a5d6b6860c1d839c704b) trigger release process (@lukekarrys)
+
+## [7.0.1](https://github.com/npm/cli/compare/config-v7.0.0...config-v7.0.1) (2023-08-31)
+
+### Bug Fixes
+
+* [`ed9a461`](https://github.com/npm/cli/commit/ed9a4610facc39a629d4830553fd7779d28ccbed) [#6685](https://github.com/npm/cli/pull/6685) prefix in .npmrc error log (#6685) (@rahulio96, @AaronHamilton965)
+
 ## [7.0.0](https://github.com/npm/cli/compare/config-v6.2.1...config-v7.0.0) (2023-07-26)
 
 ### ⚠️ BREAKING CHANGES
