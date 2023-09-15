@@ -10,6 +10,7 @@ const httpProxy = require('http-proxy')
 const { SMOKE_PUBLISH_NPM, SMOKE_PUBLISH_TARBALL, CI, PATH, Path, TAP_CHILD_ID = '0' } = process.env
 const PROXY_PORT = 12345 + (+TAP_CHILD_ID)
 const HTTP_PROXY = `http://localhost:${PROXY_PORT}/`
+const DEFAULT_REGISTRY = new URL('https://registry.npmjs.org/')
 
 const NODE_PATH = process.execPath
 const CLI_ROOT = resolve(process.cwd(), '..')
@@ -114,7 +115,11 @@ module.exports = async (t, { testdir = {}, debug, registry: _registry = {} } = {
     globalNodeModules: join(root, 'global', GLOBAL_NODE_MODULES),
   }
 
-  const registry = await createRegistry(t, { ..._registry, debug })
+  const liveRegistry = _registry === false
+  const USE_PROXY = !liveRegistry
+  const registry = liveRegistry
+    ? DEFAULT_REGISTRY
+    : await createRegistry(t, { ..._registry, debug })
 
   // update notifier should never be written
   t.afterEach((t) => {
@@ -153,7 +158,12 @@ module.exports = async (t, { testdir = {}, debug, registry: _registry = {} } = {
   const getPath = () => `${paths.globalBin}${delimiter}${Path || PATH}`
   const getEnvPath = () => ({ [Path ? 'Path' : 'PATH']: getPath() })
 
-  const baseSpawn = async (spawnCmd, spawnArgs, { cwd = paths.project, env, ...opts } = {}) => {
+  const baseSpawn = async (spawnCmd, spawnArgs, {
+    cwd = paths.project,
+    env,
+    stderr: _stderr,
+    ...opts } = {}
+  ) => {
     log(`CWD: ${cwd}`)
     log(`${spawnCmd} ${spawnArgs.join(' ')}`)
     log('-'.repeat(40))
@@ -174,11 +184,11 @@ module.exports = async (t, { testdir = {}, debug, registry: _registry = {} } = {
     log(stdout)
     log('='.repeat(40))
 
-    return stdout
+    return _stderr ? { stderr, stdout } : stdout
   }
 
   const baseNpm = async (...a) => {
-    const [{ cwd, cmd, argv = [], proxy = true, ...opts }, args] = getOpts(...a)
+    const [{ cwd, cmd, argv = [], proxy = USE_PROXY, ...opts }, args] = getOpts(...a)
 
     const isGlobal = args.some(arg => ['-g', '--global', '--global=true'].includes(arg))
 
@@ -205,7 +215,10 @@ module.exports = async (t, { testdir = {}, debug, registry: _registry = {} } = {
 
     return baseSpawn(cmd, [...argv, ...cliArgv], {
       cwd,
-      env: proxy ? { HTTP_PROXY } : {},
+      env: {
+        ...opts.env,
+        ...proxy ? { HTTP_PROXY } : {},
+      },
       ...opts,
     })
   }
@@ -262,3 +275,4 @@ module.exports.WINDOWS = WINDOWS
 module.exports.SMOKE_PUBLISH = !!SMOKE_PUBLISH_NPM
 module.exports.SMOKE_PUBLISH_TARBALL = SMOKE_PUBLISH_TARBALL
 module.exports.HTTP_PROXY = HTTP_PROXY
+module.exports.PROXY_PORT = PROXY_PORT

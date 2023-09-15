@@ -1,7 +1,7 @@
-name: 🐞 Bug v8
-description: File a bug/issue against v8.x
+name: 🐞 Bug v10
+description: File a bug/issue against v10.x
 title: "[BUG] <title>"
-labels: [Bug, Needs Triage, Release 8.x]
+labels: [Bug, Needs Triage, Release 10.x]
 body:
 - type: checkboxes
   attributes:
@@ -45,8 +45,8 @@ body:
     label: Environment
     description: |
       examples:
-        - **`npm -v`**: **npm**: 7.6.3
-        - **`node -v`**: **Node.js**: 13.14.0
+        - **`npm -v`**: **npm**: 10.0.0
+        - **`node -v`**: **Node.js**: 18.0.0
         - **OS Name**: Ubuntu 20.04
         - **System Model Name**: Macbook Pro
         - **`npm config ls`**: `; "user" config from ...`
