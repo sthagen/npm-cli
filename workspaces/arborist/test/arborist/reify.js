@@ -101,6 +101,16 @@ const warningTracker = () => {
   }
 }
 
+const outputTracker = () => {
+  const list = []
+  const onlog = (...msg) => msg[0] === 'standard' && list.push(msg)
+  process.on('output', onlog)
+  return () => {
+    process.removeListener('output', onlog)
+    return list
+  }
+}
+
 const debugLogTracker = () => {
   const list = []
   mockDebug.log = (...msg) => list.push(msg)
@@ -236,17 +246,17 @@ t.test('omit peer deps', t => {
   // in this one we also snapshot the timers, mostly just as a smoke test
   const timers = {}
   const finishedTimers = []
-  const onTime = name => {
-    t.notOk(timers[name], 'should not have duplicated timers started')
-    timers[name] = true
-  }
-  const onTimeEnd = name => {
-    t.ok(timers[name], 'should not end unstarted timer')
-    delete timers[name]
-    finishedTimers.push(name)
+  const onTime = (level, name) => {
+    if (level === 'start') {
+      t.notOk(timers[name], 'should not have duplicated timers started')
+      timers[name] = true
+    } else if (level === 'end') {
+      t.ok(timers[name], 'should not end unstarted timer')
+      delete timers[name]
+      finishedTimers.push(name)
+    }
   }
   process.on('time', onTime)
-  process.on('timeEnd', onTimeEnd)
 
   return reify(path, { omit: ['peer'] })
     .then(tree => {
@@ -267,7 +277,6 @@ t.test('omit peer deps', t => {
   // eslint-disable-next-line promise/always-return
     .then(() => {
       process.removeListener('time', onTime)
-      process.removeListener('timeEnd', onTimeEnd)
       finishedTimers.sort(localeCompare)
       t.matchSnapshot(finishedTimers, 'finished timers')
       t.strictSame(timers, {}, 'should have no timers in progress now')
@@ -2593,19 +2602,12 @@ t.test('runs dependencies script if tree changes', async (t) => {
     t.not(fs.existsSync(expectedPath), `did not run ${script}`)
   }
 
-  // take over console.log as run-script is going to print a banner for these because
-  // they're running in the foreground
-  const _log = console.log
-  t.teardown(() => {
-    console.log = _log
-  })
-  const logs = []
-  console.log = (msg) => logs.push(msg)
+  const outputs = outputTracker()
+
   // reify again, this time adding a new dependency
   await reify(path, { foregroundScripts: true, add: ['once@^1.4.0'] })
-  console.log = _log
 
-  t.match(logs, [/predependencies/, /dependencies/, /postdependencies/], 'logged banners')
+  t.match(outputs(), [/predependencies/, /dependencies/, /postdependencies/], 'logged banners')
 
   // files should exist again
   for (const script of ['predependencies', 'dependencies', 'postdependencies']) {

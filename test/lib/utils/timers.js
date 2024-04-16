@@ -1,78 +1,69 @@
 const t = require('tap')
 const { resolve, join } = require('path')
 const fs = require('graceful-fs')
-const { format } = require('util')
+const { log, time } = require('proc-log')
 const tmock = require('../../fixtures/tmock')
 
 const mockTimers = (t, options) => {
-  const logs = {
-    warn: [],
-    silly: [],
+  const logs = log.LEVELS.reduce((acc, l) => {
+    acc[l] = []
+    return acc
+  }, {})
+  const logHandler = (level, ...args) => {
+    logs[level].push(args.join(' '))
   }
-  const Timers = tmock(t, '{LIB}/utils/timers', {
-    'proc-log': {
-      warn: (...args) => logs.warn.push(args.map((a) => format(a)).join(' ')),
-      silly: (...args) => logs.silly.push(args.map((a) => format(a)).join(' ')),
-    },
-  })
+  process.on('log', logHandler)
+  const Timers = tmock(t, '{LIB}/utils/timers')
   const timers = new Timers(options)
-  t.teardown(() => timers.off())
+  t.teardown(() => {
+    timers.off()
+    process.off('log', logHandler)
+  })
   return { timers, logs }
 }
 
 t.test('listens/stops on process', async (t) => {
   const { timers } = mockTimers(t)
-  process.emit('time', 'foo')
-  process.emit('time', 'bar')
-  process.emit('timeEnd', 'bar')
+  time.start('foo')
+  time.start('bar')
+  time.end('bar')
   t.match(timers.unfinished, new Map([['foo', Number]]))
   t.match(timers.finished, { bar: Number })
   timers.off()
-  process.emit('time', 'baz')
+  time.start('baz')
   t.notOk(timers.unfinished.get('baz'))
 })
 
-t.test('convenience time method', async (t) => {
+t.test('initial timer is named npm', async (t) => {
   const { timers } = mockTimers(t)
-
-  const end = timers.time('later')
-  timers.time('sync', () => {})
-  await timers.time('async', () => new Promise(r => setTimeout(r, 10)))
-  end()
-
-  t.match(timers.finished, { later: Number, sync: Number, async: Number })
+  time.end('npm')
+  t.match(timers.finished, { npm: Number })
 })
 
-t.test('initial timer', async (t) => {
-  const { timers } = mockTimers(t, { start: 'foo' })
-  process.emit('timeEnd', 'foo')
-  t.match(timers.finished, { foo: Number })
-})
-
-t.test('initial listener', async (t) => {
+t.test('logs timing events', async (t) => {
   const events = []
   const listener = (...args) => events.push(args)
-  const { timers } = mockTimers(t, { listener })
-  process.emit('time', 'foo')
-  process.emit('time', 'bar')
-  process.emit('timeEnd', 'bar')
+  const { timers, logs } = mockTimers(t, { listener })
+  time.start('foo')
+  time.start('bar')
+  time.end('bar')
   timers.off(listener)
-  process.emit('timeEnd', 'foo')
-  t.equal(events.length, 1)
-  t.match(events, [['bar', Number]])
+  time.end('foo')
+  t.equal(logs.timing.length, 1)
+  t.match(logs.timing[0], /^bar Completed in [0-9]ms/)
 })
 
 t.test('finish unstarted timer', async (t) => {
   const { logs } = mockTimers(t)
-  process.emit('timeEnd', 'foo')
+  time.end('foo')
   t.match(logs.silly, ["timing Tried to end timer that doesn't exist: foo"])
 })
 
 t.test('writes file', async (t) => {
   const { timers } = mockTimers(t)
   const dir = t.testdir()
-  process.emit('time', 'foo')
-  process.emit('timeEnd', 'foo')
+  time.start('foo')
+  time.end('foo')
   timers.load({ path: resolve(dir, `TIMING_FILE-`) })
   timers.writeFile({ some: 'data' })
   const data = JSON.parse(fs.readFileSync(resolve(dir, 'TIMING_FILE-timing.json')))

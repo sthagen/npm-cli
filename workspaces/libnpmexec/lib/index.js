@@ -4,7 +4,7 @@ const { mkdir } = require('fs/promises')
 const Arborist = require('@npmcli/arborist')
 const ciInfo = require('ci-info')
 const crypto = require('crypto')
-const log = require('proc-log')
+const { log } = require('proc-log')
 const npa = require('npm-package-arg')
 const pacote = require('pacote')
 const { read } = require('read')
@@ -83,7 +83,6 @@ const exec = async (opts) => {
     locationMsg = undefined,
     globalBin = '',
     globalPath,
-    output,
     // dereference values because we manipulate it later
     packages: [...packages] = [],
     path = '.',
@@ -98,7 +97,6 @@ const exec = async (opts) => {
     call,
     flatOptions,
     locationMsg,
-    output,
     path,
     binPaths,
     runPath,
