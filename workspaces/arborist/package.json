@@ -1,6 +1,6 @@
 {
   "name": "@npmcli/arborist",
-  "version": "7.4.2",
+  "version": "7.5.0",
   "description": "Manage node_modules trees",
   "dependencies": {
     "@isaacs/string-locale-compare": "^1.1.0",
@@ -62,7 +62,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/npm/cli.git",
+    "url": "git+https://github.com/npm/cli.git",
     "directory": "workspaces/arborist"
   },
   "author": "GitHub Inc.",

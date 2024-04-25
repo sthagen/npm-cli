@@ -1,6 +1,6 @@
 {
   "name": "libnpmexec",
-  "version": "7.0.10",
+  "version": "8.0.0",
   "files": [
     "bin/",
     "lib/"
@@ -12,7 +12,7 @@
   "description": "npm exec (npx) programmatic API",
   "repository": {
     "type": "git",
-    "url": "https://github.com/npm/cli.git",
+    "url": "git+https://github.com/npm/cli.git",
     "directory": "workspaces/libnpmexec"
   },
   "keywords": [
