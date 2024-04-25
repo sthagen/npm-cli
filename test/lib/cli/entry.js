@@ -1,7 +1,9 @@
 const t = require('tap')
-const { load: loadMockNpm } = require('../fixtures/mock-npm.js')
-const tmock = require('../fixtures/tmock.js')
-const validateEngines = require('../../lib/es6/validate-engines.js')
+const { readdirSync } = require('fs')
+const { dirname } = require('path')
+const { load: loadMockNpm } = require('../../fixtures/mock-npm.js')
+const tmock = require('../../fixtures/tmock.js')
+const validateEngines = require('../../../lib/cli/validate-engines.js')
 
 const cliMock = async (t, opts) => {
   let exitHandlerArgs = null
@@ -13,9 +15,9 @@ const cliMock = async (t, opts) => {
   exitHandlerMock.setNpm = _npm => npm = _npm
 
   const { Npm, ...mock } = await loadMockNpm(t, { ...opts, init: false })
-  const cli = tmock(t, '{LIB}/cli-entry.js', {
+  const cli = tmock(t, '{LIB}/cli/entry.js', {
     '{LIB}/npm.js': Npm,
-    '{LIB}/utils/exit-handler.js': exitHandlerMock,
+    '{LIB}/cli/exit-handler.js': exitHandlerMock,
   })
 
   return {
@@ -29,20 +31,17 @@ const cliMock = async (t, opts) => {
 
 t.test('print the version, and treat npm_g as npm -g', async t => {
   const { logs, cli, Npm, outputs, exitHandlerCalled } = await cliMock(t, {
-    globals: { 'process.argv': ['node', 'npm_g', '-v'] },
+    globals: { 'process.argv': ['node', 'npm_g', 'root'] },
   })
   await cli(process)
 
-  t.strictSame(process.argv, ['node', 'npm', '-g', '-v'], 'system process.argv was rewritten')
+  t.strictSame(process.argv, ['node', 'npm', '-g', 'root'], 'system process.argv was rewritten')
   t.strictSame(logs.verbose.byTitle('cli'), ['cli node npm'])
-  t.strictSame(logs.verbose.byTitle('title'), ['title npm'])
-  t.match(logs.verbose.byTitle('argv'), ['argv "--global" "--version"'])
-  t.strictSame(logs.info, [
-    `using npm@${Npm.version}`,
-    `using node@${process.version}`,
-  ])
+  t.strictSame(logs.verbose.byTitle('title'), ['title npm root'])
+  t.match(logs.verbose.byTitle('argv'), ['argv "--global" "root"'])
+  t.strictSame(logs.info, [`using npm@${Npm.version}`, `using node@${process.version}`])
   t.equal(outputs.length, 1)
-  t.strictSame(outputs, [Npm.version])
+  t.match(outputs[0], dirname(process.cwd()))
   t.strictSame(exitHandlerCalled(), [])
 })
 
@@ -158,4 +157,28 @@ t.test('unsupported node version', async t => {
     logs.warn[0],
     /npm v.* does not support Node\.js 12\.6\.0\./
   )
+})
+
+t.test('non-ascii dash', async t => {
+  const { cli, logs } = await cliMock(t, {
+    globals: {
+      'process.argv': ['node', 'npm', 'scope', '\u2010not-a-dash'],
+    },
+  })
+  await cli(process)
+  t.equal(
+    logs.error[0],
+    'arg Argument starts with non-ascii dash, this is probably invalid: \u2010not-a-dash'
+  )
+})
+
+t.test('exit early for --version', async t => {
+  const { cli, outputs, Npm, cache } = await cliMock(t, {
+    globals: {
+      'process.argv': ['node', 'npm', '-v'],
+    },
+  })
+  await cli(process)
+  t.strictSame(readdirSync(cache), [], 'nothing created in cache')
+  t.equal(outputs[0], Npm.version)
 })

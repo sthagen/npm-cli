@@ -26,25 +26,13 @@ t.test('not yet loaded', async t => {
 t.test('npm.load', async t => {
   await t.test('load error', async t => {
     const { npm } = await loadMockNpm(t, { load: false })
-    const loadError = new Error('load error')
     npm.config.load = async () => {
-      throw loadError
+      throw new Error('load error')
     }
     await t.rejects(
       () => npm.load(),
       /load error/
     )
-
-    t.equal(npm.loadErr, loadError)
-    npm.config.load = async () => {
-      throw new Error('different error')
-    }
-    await t.rejects(
-      () => npm.load(),
-      /load error/,
-      'loading again returns the original error'
-    )
-    t.equal(npm.loadErr, loadError)
   })
 
   await t.test('basic loading', async t => {
@@ -178,17 +166,16 @@ t.test('npm.load', async t => {
 
     outputs.length = 0
     logs.length = 0
-    await npm.exec('get', ['scope', '\u2010not-a-dash'])
+    await npm.exec('get', ['scope', 'usage'])
 
     t.strictSame([npm.command, npm.flatOptions.npmCommand], ['ll', 'll'],
       'does not change npm.command when another command is called')
 
     t.match(logs, [
-      'error arg Argument starts with non-ascii dash, this is probably invalid: \u2010not-a-dash',
       /timing command:config Completed in [0-9.]+ms/,
       /timing command:get Completed in [0-9.]+ms/,
     ])
-    t.same(outputs, ['scope=@foo\n\u2010not-a-dash=undefined'])
+    t.same(outputs, ['scope=@foo\nusage=false'])
   })
 
   await t.test('--no-workspaces with --workspace', async t => {
@@ -393,48 +380,14 @@ t.test('cache dir', async t => {
 })
 
 t.test('timings', async t => {
-  t.test('gets/sets timers', async t => {
-    const { npm, logs } = await loadMockNpm(t, {
-      config: {
-        timing: true,
-      },
-    })
-    time.start('foo')
-    time.start('bar')
-    t.match(npm.unfinishedTimers.get('foo'), Number, 'foo timer is a number')
-    t.match(npm.unfinishedTimers.get('bar'), Number, 'foo timer is a number')
-    time.end('foo')
-    time.end('bar')
-    time.end('baz')
-    // npm timer is started by default
-    time.end('npm')
-    t.match(logs.timing.byTitle('foo'), [
-      /Completed in [0-9]+ms/,
-    ])
-    t.match(logs.timing.byTitle('bar'), [
-      /Completed in [0-9]+ms/,
-    ])
-    t.match(logs.timing.byTitle('npm'), [
-      /Completed in [0-9]+ms/,
-    ])
-    t.match(logs.silly, [
-      `timing Tried to end timer that doesn't exist: baz`,
-    ])
-    t.notOk(npm.unfinishedTimers.has('foo'), 'foo timer is gone')
-    t.notOk(npm.unfinishedTimers.has('bar'), 'bar timer is gone')
-    t.match(npm.finishedTimers, { foo: Number, bar: Number, npm: Number })
-  })
-
   t.test('writes timings file', async t => {
-    const { npm, cache, timingFile } = await loadMockNpm(t, {
+    const { npm, timingFile } = await loadMockNpm(t, {
       config: { timing: true },
     })
     time.start('foo')
     time.end('foo')
     time.start('bar')
-    npm.writeTimingFile()
-    t.match(npm.timingFile, cache)
-    t.match(npm.timingFile, /-timing.json$/)
+    npm.finish()
     const timings = await timingFile()
     t.match(timings, {
       metadata: {
@@ -444,7 +397,6 @@ t.test('timings', async t => {
       },
       unfinishedTimers: {
         bar: [Number, Number],
-        npm: [Number, Number],
       },
       timers: {
         foo: Number,
@@ -457,7 +409,7 @@ t.test('timings', async t => {
     const { npm, timingFile } = await loadMockNpm(t, {
       config: { timing: false },
     })
-    npm.writeTimingFile()
+    npm.finish()
     await t.rejects(() => timingFile())
   })
 
