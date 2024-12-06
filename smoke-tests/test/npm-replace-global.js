@@ -103,6 +103,7 @@ t.test('publish and replace global self', async t => {
     getPaths,
     paths: { globalBin, globalNodeModules, cache },
   } = await setupNpmGlobal(t, {
+    strictRegistryNock: false,
     testdir: {
       home: {
         '.npmrc': `//${setup.MOCK_REGISTRY.host}/:_authToken = test-token`,
