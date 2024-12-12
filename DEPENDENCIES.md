@@ -256,7 +256,6 @@ graph LR;
 ## all dependencies
 ```mermaid
 graph LR;
-  agent-base-->debug;
   bin-links-->cmd-shim;
   bin-links-->npm-normalize-package-bin;
   bin-links-->proc-log;
