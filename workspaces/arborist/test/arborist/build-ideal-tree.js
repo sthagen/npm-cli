@@ -3984,6 +3984,82 @@ t.test('overrides', async t => {
     t.equal(fooBarEdge.valid, true)
     t.equal(fooBarEdge.to.version, '2.0.0')
   })
+
+  t.test('root overrides should be respected by workspaces on subsequent installs', async t => {
+    // • The root package.json declares a workspaces field, a direct dependency on "abbrev" with version constraint "^1.1.1", and an overrides field for "abbrev" also "^1.1.1".
+    // • The workspace "onepackage" depends on "abbrev" at "1.0.3".
+    const rootPkg = {
+      name: 'root',
+      version: '1.0.0',
+      workspaces: ['onepackage'],
+      dependencies: {
+        abbrev: '^1.1.1',
+        wrappy: '1.0.1',
+      },
+      overrides: {
+        abbrev: '^1.1.1',
+        wrappy: '1.0.1',
+      },
+    }
+    const workspacePkg = {
+      name: 'onepackage',
+      version: '1.0.0',
+      dependencies: {
+        abbrev: '1.0.3',
+        wrappy: '1.0.1',
+      },
+    }
+
+    createRegistry(t, true)
+
+    const dir = t.testdir({
+      'package.json': JSON.stringify(rootPkg, null, 2),
+      onepackage: {
+        'package.json': JSON.stringify(workspacePkg, null, 2),
+      },
+    })
+
+    // fresh install
+    const tree1 = await buildIdeal(dir)
+
+    // The ideal tree should resolve "abbrev" at the root to 1.1.1.
+    t.equal(
+      tree1.children.get('abbrev').package.version,
+      '1.1.1',
+      'first install: root "abbrev" is forced to version 1.1.1'
+    )
+    // The workspace "onepackage" should not have its own nested "abbrev".
+    const onepackageNode1 = tree1.children.get('onepackage').target
+    t.notOk(
+      onepackageNode1.children.has('abbrev'),
+      'first install: workspace does not install "abbrev" separately'
+    )
+
+    // Write out the package-lock.json to disk to mimic a real install.
+    await tree1.meta.save()
+
+    // Simulate re-running install (which reads the package-lock).
+    const tree2 = await buildIdeal(dir)
+
+    // tree2 should NOT have its own abbrev dependency.
+    const onepackageNode2 = tree2.children.get('onepackage').target
+    t.notOk(
+      onepackageNode2.children.has('abbrev'),
+      'workspace should NOT have nested "abbrev" after subsequent install'
+    )
+
+    // The root "abbrev" should still be 1.1.1.
+    t.equal(
+      tree2.children.get('abbrev').package.version,
+      '1.1.1',
+      'second install: root "abbrev" is still forced to version 1.1.1')
+
+    // Overrides should NOT persist unnecessarily
+    t.notOk(
+      onepackageNode2.overrides && onepackageNode2.overrides.has('abbrev'),
+      'workspace node should not unnecessarily retain overrides after subsequent install'
+    )
+  })
 })
 
 t.test('store files with a custom indenting', async t => {

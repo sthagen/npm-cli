@@ -13,6 +13,7 @@ const { lstat, readlink } = require('node:fs/promises')
 const { depth } = require('treeverse')
 const { log, time } = require('proc-log')
 const { redact } = require('@npmcli/redact')
+const semver = require('semver')
 
 const {
   OK,
@@ -279,14 +280,23 @@ module.exports = cls => class IdealTreeBuilder extends cls {
       // When updating all, we load the shrinkwrap, but don't bother
       // to build out the full virtual tree from it, since we'll be
       // reconstructing it anyway.
-      .then(root => this.options.global ? root
-      : !this[_usePackageLock] || this[_updateAll]
-        ? Shrinkwrap.reset({
-          path: this.path,
-          lockfileVersion: this.options.lockfileVersion,
-          resolveOptions: this.options,
-        }).then(meta => Object.assign(root, { meta }))
-        : this.loadVirtual({ root }))
+      .then(root => {
+        if (this.options.global) {
+          return root
+        } else if (!this[_usePackageLock] || this[_updateAll]) {
+          return Shrinkwrap.reset({
+            path: this.path,
+            lockfileVersion: this.options.lockfileVersion,
+            resolveOptions: this.options,
+          }).then(meta => Object.assign(root, { meta }))
+        } else {
+          return this.loadVirtual({ root })
+            .then(tree => {
+              this.#applyRootOverridesToWorkspaces(tree)
+              return tree
+            })
+        }
+      })
 
       // if we don't have a lockfile to go from, then start with the
       // actual tree, so we only make the minimum required changes.
@@ -1473,6 +1483,32 @@ This is a one-time fix-up, please be patient...
     }
 
     timeEnd()
+  }
+
+  #applyRootOverridesToWorkspaces (tree) {
+    const rootOverrides = tree.root.package.overrides || {}
+
+    for (const node of tree.root.inventory.values()) {
+      if (!node.isWorkspace) {
+        continue
+      }
+
+      for (const depName of Object.keys(rootOverrides)) {
+        const edge = node.edgesOut.get(depName)
+        const rootNode = tree.root.children.get(depName)
+
+        // safely skip if either edge or rootNode doesn't exist yet
+        if (!edge || !rootNode) {
+          continue
+        }
+
+        const resolvedRootVersion = rootNode.package.version
+        if (!semver.satisfies(resolvedRootVersion, edge.spec)) {
+          edge.detach()
+          node.children.delete(depName)
+        }
+      }
+    }
   }
 
   #idealTreePrune () {
