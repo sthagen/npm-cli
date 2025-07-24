@@ -80,7 +80,11 @@ class MockRegistry {
         // XXX: this is opt-in currently because it breaks some existing CLI
         // tests. We should work towards making this the default for all tests.
         t.comment(logReq(req, 'interceptors', 'socket', 'response', '_events'))
-        t.fail(`Unmatched request: ${req.method} ${req.path}`)
+        const protocol = req?.options?.protocol || 'http:'
+        const hostname = req?.options?.hostname || req?.hostname || 'localhost'
+        const p = req?.path || '/'
+        const url = new URL(p, `${protocol}//${hostname}`).toString()
+        t.fail(`Unmatched request: ${req.method} ${url}`)
       }
     }
 
@@ -359,7 +363,7 @@ class MockRegistry {
   }
 
   publish (name, {
-    packageJson, access, noGet, noPut, putCode, manifest, packuments,
+    packageJson, access, noGet, noPut, putCode, manifest, packuments, token,
   } = {}) {
     if (!noGet) {
       // this getPackage call is used to get the latest semver version before publish
@@ -373,7 +377,7 @@ class MockRegistry {
       }
     }
     if (!noPut) {
-      this.putPackage(name, { code: putCode, packageJson, access })
+      this.putPackage(name, { code: putCode, packageJson, access, token })
     }
   }
 
@@ -391,10 +395,14 @@ class MockRegistry {
     this.nock = nock
   }
 
-  putPackage (name, { code = 200, resp = {}, ...putPackagePayload }) {
-    this.nock.put(`/${npa(name).escapedName}`, body => {
+  putPackage (name, { code = 200, resp = {}, token, ...putPackagePayload }) {
+    let n = this.nock.put(`/${npa(name).escapedName}`, body => {
       return this.#tap.match(body, this.putPackagePayload({ name, ...putPackagePayload }))
-    }).reply(code, resp)
+    })
+    if (token) {
+      n = n.matchHeader('authorization', `Bearer ${token}`)
+    }
+    n.reply(code, resp)
   }
 
   putPackagePayload (opts) {
@@ -625,6 +633,13 @@ class MockRegistry {
         })
       }
     }
+  }
+
+  mockOidcTokenExchange ({ packageName, idToken, statusCode = 200, body } = {}) {
+    const encodedPackageName = npa(packageName).escapedName
+    this.nock.post(this.fullPath(`/-/npm/v1/oidc/token/exchange/package/${encodedPackageName}`))
+      .matchHeader('authorization', `Bearer ${idToken}`)
+      .reply(statusCode, body || {})
   }
 }
 
