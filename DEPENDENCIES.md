@@ -38,7 +38,6 @@ graph LR;
   libnpmexec-->npmcli-template-oss["@npmcli/template-oss"];
   libnpmexec-->pacote;
   libnpmexec-->proc-log;
-  libnpmexec-->read-package-json-fast;
   libnpmexec-->read;
   libnpmexec-->semver;
   libnpmfund-->npmcli-arborist["@npmcli/arborist"];
@@ -178,7 +177,6 @@ graph LR;
   npmcli-arborist-->parse-conflict-json;
   npmcli-arborist-->proc-log;
   npmcli-arborist-->proggy;
-  npmcli-arborist-->read-package-json-fast;
   npmcli-arborist-->semver;
   npmcli-arborist-->ssri;
   npmcli-config-->ini;
@@ -248,8 +246,6 @@ graph LR;
   parse-conflict-json-->json-parse-even-better-errors;
   promzard-->read;
   read-->mute-stream;
-  read-package-json-fast-->json-parse-even-better-errors;
-  read-package-json-fast-->npm-normalize-package-bin;
   unique-filename-->unique-slug;
 ```
 
@@ -306,9 +302,8 @@ graph LR;
   init-package-json-->semver;
   init-package-json-->validate-npm-package-license;
   init-package-json-->validate-npm-package-name;
-  ip-address-->jsbn;
-  ip-address-->sprintf-js;
   is-cidr-->cidr-regex;
+  isaacs-brace-expansion-->isaacs-balanced-match["@isaacs/balanced-match"];
   isaacs-cliui-->string-width-cjs;
   isaacs-cliui-->string-width;
   isaacs-cliui-->strip-ansi-cjs;
@@ -317,7 +312,6 @@ graph LR;
   isaacs-cliui-->wrap-ansi;
   isaacs-fs-minipass-->minipass;
   jackspeak-->isaacs-cliui["@isaacs/cliui"];
-  jackspeak-->pkgjs-parseargs["@pkgjs/parseargs"];
   libnpmaccess-->npm-package-arg;
   libnpmaccess-->npm-registry-fetch;
   libnpmaccess-->npmcli-eslint-config["@npmcli/eslint-config"];
@@ -350,7 +344,6 @@ graph LR;
   libnpmexec-->pacote;
   libnpmexec-->proc-log;
   libnpmexec-->promise-retry;
-  libnpmexec-->read-package-json-fast;
   libnpmexec-->read;
   libnpmexec-->semver;
   libnpmexec-->signal-exit;
@@ -421,6 +414,7 @@ graph LR;
   make-fetch-happen-->promise-retry;
   make-fetch-happen-->ssri;
   minimatch-->brace-expansion;
+  minimatch-->isaacs-brace-expansion["@isaacs/brace-expansion"];
   minipass-->yallist;
   minipass-collect-->minipass;
   minipass-fetch-->encoding;
@@ -593,7 +587,6 @@ graph LR;
   npmcli-arborist-->proggy;
   npmcli-arborist-->promise-all-reject-late;
   npmcli-arborist-->promise-call-limit;
-  npmcli-arborist-->read-package-json-fast;
   npmcli-arborist-->semver;
   npmcli-arborist-->ssri;
   npmcli-arborist-->tap;
@@ -710,8 +703,6 @@ graph LR;
   promise-retry-->retry;
   promzard-->read;
   read-->mute-stream;
-  read-package-json-fast-->json-parse-even-better-errors;
-  read-package-json-fast-->npm-normalize-package-bin;
   shebang-command-->shebang-regex;
   sigstore-->sigstore-bundle["@sigstore/bundle"];
   sigstore-->sigstore-core["@sigstore/core"];
@@ -747,11 +738,9 @@ graph LR;
   string-width-->strip-ansi;
   strip-ansi-->ansi-regex;
   tar-->chownr;
-  tar-->fs-minipass;
   tar-->isaacs-fs-minipass["@isaacs/fs-minipass"];
   tar-->minipass;
   tar-->minizlib;
-  tar-->mkdirp;
   tar-->yallist;
   tinyglobby-->fdir;
   tinyglobby-->picomatch;
@@ -787,5 +776,5 @@ packages higher up the chain.
  - @npmcli/package-json, npm-registry-fetch
  - @npmcli/git, make-fetch-happen
  - @npmcli/smoke-tests, @npmcli/installed-package-contents, npm-pick-manifest, cacache, promzard
- - @npmcli/docs, @npmcli/fs, npm-bundled, @npmcli/promise-spawn, npm-install-checks, npm-package-arg, unique-filename, npm-packlist, bin-links, nopt, parse-conflict-json, read-package-json-fast, @npmcli/mock-globals, read, normalize-package-data
+ - @npmcli/docs, @npmcli/fs, npm-bundled, @npmcli/promise-spawn, npm-install-checks, npm-package-arg, unique-filename, npm-packlist, bin-links, nopt, parse-conflict-json, @npmcli/mock-globals, read, normalize-package-data
  - @npmcli/eslint-config, @npmcli/template-oss, ignore-walk, semver, npm-normalize-package-bin, @npmcli/name-from-folder, which, ini, hosted-git-info, proc-log, validate-npm-package-name, json-parse-even-better-errors, ssri, unique-slug, @npmcli/node-gyp, @npmcli/redact, @npmcli/agent, minipass-fetch, @npmcli/query, cmd-shim, read-cmd-shim, write-file-atomic, abbrev, proggy, minify-registry-metadata, mute-stream, npm-audit-report, npm-user-validate
