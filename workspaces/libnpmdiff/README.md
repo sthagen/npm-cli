@@ -70,12 +70,12 @@ Happy hacking!
 
 #### `> libnpmdif([ a, b ], [opts]) -> Promise<String>`
 
-Fetches the registry tarballs and compare files between a spec `a` and spec `b`. **npm** spec types are usually described in `<pkg-name>@<version>` form but multiple other types are alsos supported, for more info on valid specs take a look at [`npm-package-arg`](https://github.com/npm/npm-package-arg).
+Fetches the registry tarballs and compare files between a spec `a` and spec `b`. **npm** spec types are usually described in `<pkg-name>@<version>` form but multiple other types are also supported, for more info on valid specs take a look at [`npm-package-arg`](https://github.com/npm/npm-package-arg).
 
 **Options**:
 
 - `color <Boolean>`: Should add ANSI colors to string output? Defaults to `false`.
-- `tagVersionPrefix <Sring>`: What prefix should be used to define version numbers. Defaults to `v`
+- `tagVersionPrefix <String>`: What prefix should be used to define version numbers. Defaults to `v`
 - `diffUnified <Number>`: How many lines of code to print before/after each diff. Defaults to `3`.
 - `diffFiles <Array<String>>`: If set only prints patches for the files listed in this array (also accepts globs). Defaults to `undefined`.
 - `diffIgnoreAllSpace <Boolean>`: Whether or not should ignore changes in whitespace (very useful to avoid indentation changes extra diff lines). Defaults to `false`.
@@ -86,7 +86,7 @@ Fetches the registry tarballs and compare files between a spec `a` and spec `b`.
 - `diffText <Boolean>`: Should treat all files as text and try to print diff for binary files. Defaults to `false`.
 - ...`cache`, `registry`, `where` and other common options accepted by [pacote](https://github.com/npm/pacote#options)
 
-Returns a `Promise` that fullfils with a `String` containing the resulting patch diffs.
+Returns a `Promise` that fulfills with a `String` containing the resulting patch diffs.
 
 Throws an error if either `a` or `b` are missing or if trying to diff more than two specs.
 
