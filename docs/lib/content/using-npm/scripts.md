@@ -65,7 +65,7 @@ situations. These scripts happen in addition to the `pre<event>`, `post<event>`,
 
 **prepack**
 * Runs BEFORE a tarball is packed (on "`npm pack`", "`npm publish`", and when installing a git dependency).
-* NOTE: "`npm run pack`" is NOT the same as "`npm pack`". "`npm run pack`" is an arbitrary user defined script name, where as, "`npm pack`" is a CLI defined command.
+* NOTE: "`npm run pack`" is NOT the same as "`npm pack`". "`npm run pack`" is an arbitrary user defined script name, whereas, "`npm pack`" is a CLI defined command.
 
 **postpack**
 * Runs AFTER the tarball has been generated but before it is moved to its final destination (if at all, publish does not save the tarball locally)
@@ -221,8 +221,8 @@ While npm v6 had `uninstall` lifecycle scripts, npm v7 does not. Removal of a pa
 Reasons for a package removal include:
 
 * a user directly uninstalled this package
-* a user uninstalled a dependant package and so this dependency is being uninstalled
-* a user uninstalled a dependant package but another package also depends on this version
+* a user uninstalled a dependent package and so this dependency is being uninstalled
+* a user uninstalled a dependent package but another package also depends on this version
 * this version has been merged as a duplicate with another version
 * etc.
 

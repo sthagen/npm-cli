@@ -192,7 +192,7 @@ module.exports = cls => class IdealTreeBuilder extends cls {
   }
 
   async #checkEngineAndPlatform () {
-    const { engineStrict, npmVersion, nodeVersion, omit = [] } = this.options
+    const { engineStrict, npmVersion, nodeVersion, omit = [], cpu, os, libc } = this.options
     const omitSet = new Set(omit)
 
     for (const node of this.idealTree.inventory.values()) {
@@ -213,6 +213,19 @@ module.exports = cls => class IdealTreeBuilder extends cls {
           })
         }
         checkPlatform(node.package, this.options.force)
+      }
+      if (node.optional && !node.inert) {
+        // Mark any optional packages we can't install as inert.
+        // We ignore the --force and --engine-strict flags.
+        try {
+          checkEngine(node.package, npmVersion, nodeVersion, false)
+          checkPlatform(node.package, false, { cpu, os, libc })
+        } catch (error) {
+          const set = optionalSet(node)
+          for (const node of set) {
+            node.inert = true
+          }
+        }
       }
     }
   }
@@ -324,7 +337,7 @@ module.exports = cls => class IdealTreeBuilder extends cls {
       })
 
       .then(tree => {
-        // search the virtual tree for invalid edges, if any are found add their source to
+        // search the virtual tree for missing/invalid edges, if any are found add their source to
         // the depsQueue so that we'll fix it later
         depth({
           tree,
@@ -338,7 +351,7 @@ module.exports = cls => class IdealTreeBuilder extends cls {
           filter: node => node,
           visit: node => {
             for (const edge of node.edgesOut.values()) {
-              if (!edge.valid) {
+              if (!edge.to || !edge.valid) {
                 this.#depsQueue.push(node)
                 break // no need to continue the loop after the first hit
               }
@@ -811,7 +824,7 @@ This is a one-time fix-up, please be patient...
       node !== this.idealTree &&
       node.resolved &&
       (hasBundle || hasShrinkwrap) &&
-      !node.ideallyInert
+      !node.inert
     if (crackOpen) {
       const Arborist = this.constructor
       const opt = { ...this.options }
@@ -1561,7 +1574,7 @@ This is a one-time fix-up, please be patient...
 
       const set = optionalSet(node)
       for (const node of set) {
-        node.ideallyInert = true
+        node.inert = true
       }
     }
   }
@@ -1582,7 +1595,7 @@ This is a one-time fix-up, please be patient...
           node.parent !== null
           && !node.isProjectRoot
           && !excludeNodes.has(node)
-          && !node.ideallyInert
+          && !node.inert
         ) {
           this[_addNodeToTrashList](node)
         }
