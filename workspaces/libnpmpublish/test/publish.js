@@ -1,5 +1,7 @@
 'use strict'
 
+// Comment to trigger tests
+
 const crypto = require('node:crypto')
 const fs = require('node:fs')
 const npa = require('npm-package-arg')
@@ -403,6 +405,7 @@ t.test('publish existing package with provenance in gha', async t => {
   const oidcClaims = {
     iss: 'https://oauth2.sigstore.dev/auth',
     email: 'foo@bar.com',
+    email_verified: true,
   }
   const idToken = `.${Buffer.from(JSON.stringify(oidcClaims)).toString('base64')}.`
 
@@ -700,7 +703,7 @@ t.test('automatic provenance in unsupported environment', async t => {
 t.test('automatic provenance with incorrect permissions', async t => {
   mockGlobals(t, {
     'process.env': {
-      CI: false,
+      CI: true,
       GITHUB_ACTIONS: true,
       ACTIONS_ID_TOKEN_REQUEST_URL: undefined,
     },
@@ -911,6 +914,7 @@ t.test('publish existing package with provenance in gitlab', async t => {
   const oidcClaims = {
     iss: 'https://oauth2.sigstore.dev/auth',
     email: 'foo@bar.com',
+    email_verified: true,
   }
   const idToken = `.${Buffer.from(JSON.stringify(oidcClaims)).toString('base64')}.`
 
