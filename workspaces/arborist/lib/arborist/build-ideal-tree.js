@@ -42,7 +42,6 @@ const _flagsSuspect = Symbol.for('flagsSuspect')
 const _setWorkspaces = Symbol.for('setWorkspaces')
 const _updateNames = Symbol.for('updateNames')
 const _resolvedAdd = Symbol.for('resolvedAdd')
-const _usePackageLock = Symbol.for('usePackageLock')
 const _rpcache = Symbol.for('realpathCache')
 const _stcache = Symbol.for('statCache')
 
@@ -101,39 +100,28 @@ module.exports = cls => class IdealTreeBuilder extends cls {
   constructor (options) {
     super(options)
 
-    // normalize trailing slash
-    const registry = options.registry || 'https://registry.npmjs.org'
-    options.registry = this.registry = registry.replace(/\/+$/, '') + '/'
-
     const {
       follow = false,
       installStrategy = 'hoisted',
-      idealTree = null,
-      installLinks = false,
-      legacyPeerDeps = false,
-      packageLock = true,
       strictPeerDeps = false,
-      workspaces,
       global,
     } = options
 
     this.#strictPeerDeps = !!strictPeerDeps
 
-    this.idealTree = idealTree
-    this.installLinks = installLinks
-    this.legacyPeerDeps = legacyPeerDeps
-
-    this[_usePackageLock] = packageLock
     this.#installStrategy = global ? 'shallow' : installStrategy
     this.#follow = !!follow
-
-    if (workspaces?.length && global) {
-      throw new Error('Cannot operate on workspaces in global mode')
-    }
 
     this[_updateAll] = false
     this[_updateNames] = []
     this[_resolvedAdd] = []
+
+    // caches for cached realpath calls
+    const cwd = process.cwd()
+    // assume that the cwd is real enough for our purposes
+    this[_rpcache] = new Map([[cwd, cwd]])
+    this[_stcache] = new Map()
+    this[_flagsSuspect] = false
   }
 
   get explicitRequests () {
@@ -298,7 +286,7 @@ module.exports = cls => class IdealTreeBuilder extends cls {
       .then(root => {
         if (this.options.global) {
           return root
-        } else if (!this[_usePackageLock] || this[_updateAll]) {
+        } else if (!this.options.usePackageLock || this[_updateAll]) {
           return Shrinkwrap.reset({
             path: this.path,
             lockfileVersion: this.options.lockfileVersion,
@@ -1231,7 +1219,7 @@ This is a one-time fix-up, please be patient...
     }
   }
 
-  #nodeFromSpec (name, spec, parent, edge) {
+  async #nodeFromSpec (name, spec, parent, edge) {
     // pacote will slap integrity on its options, so we have to clone
     // the object so it doesn't get mutated.
     // Don't bother to load the manifest for link deps, because the target
@@ -1260,7 +1248,13 @@ This is a one-time fix-up, please be patient...
     // Decide whether to link or copy the dependency
     const shouldLink = (isWorkspace || isProjectInternalFileSpec || !installLinks) && !isTransitiveFileDep
     if (spec.type === 'directory' && shouldLink) {
-      return this.#linkFromSpec(name, spec, parent, edge)
+      const realpath = spec.fetchSpec
+      const { content: pkg } = await PackageJson.normalize(realpath).catch(() => {
+        return { content: {} }
+      })
+      const link = new Link({ name, parent, realpath, pkg, installLinks, legacyPeerDeps })
+      this.#linkNodes.add(link)
+      return link
     }
 
     // if the spec matches a workspace name, then see if the workspace node will satisfy the edge. if it does, we return the workspace node to make sure it takes priority.
@@ -1299,17 +1293,6 @@ This is a one-time fix-up, please be patient...
         this.#loadFailures.add(n)
         return n
       })
-  }
-
-  async #linkFromSpec (name, spec, parent) {
-    const realpath = spec.fetchSpec
-    const { installLinks, legacyPeerDeps } = this
-    const { content: pkg } = await PackageJson.normalize(realpath).catch(() => {
-      return { content: {} }
-    })
-    const link = new Link({ name, parent, realpath, pkg, installLinks, legacyPeerDeps })
-    this.#linkNodes.add(link)
-    return link
   }
 
   // load all peer deps and meta-peer deps into the node's parent
@@ -1446,6 +1429,7 @@ This is a one-time fix-up, please be patient...
   //   and add it to the _depsQueue
   //
   // call buildDepStep if anything was added to the queue; otherwise, we're done
+  // XXX load-virtual also has a #resolveLinks, is there overlap?
   #resolveLinks () {
     for (const link of this.#linkNodes) {
       this.#linkNodes.delete(link)

@@ -18,14 +18,6 @@ const setWorkspaces = Symbol.for('setWorkspaces')
 module.exports = cls => class VirtualLoader extends cls {
   #rootOptionProvided
 
-  constructor (options) {
-    super(options)
-
-    // the virtual tree we load from a shrinkwrap
-    this.virtualTree = options.virtualTree
-    this[flagsSuspect] = false
-  }
-
   // public method
   async loadVirtual (options = {}) {
     if (this.virtualTree) {
@@ -77,7 +69,21 @@ module.exports = cls => class VirtualLoader extends cls {
     this.#checkRootEdges(s, root)
     root.meta = s
     this.virtualTree = root
-    const { links, nodes } = this.#resolveNodes(s, root)
+    // separate out link metadata, and create Node objects for nodes
+    const links = new Map()
+    const nodes = new Map([['', root]])
+    for (const [location, meta] of Object.entries(s.data.packages)) {
+      // skip the root because we already got it
+      if (!location) {
+        continue
+      }
+
+      if (meta.link) {
+        links.set(location, meta)
+      } else {
+        nodes.set(location, this.#loadNode(location, meta))
+      }
+    }
     await this.#resolveLinks(links, nodes)
     if (!(s.originalLockfileVersion >= 2)) {
       this.#assignBundles(nodes)
@@ -160,27 +166,9 @@ module.exports = cls => class VirtualLoader extends cls {
     }
   }
 
-  // separate out link metadata, and create Node objects for nodes
-  #resolveNodes (s, root) {
-    const links = new Map()
-    const nodes = new Map([['', root]])
-    for (const [location, meta] of Object.entries(s.data.packages)) {
-      // skip the root because we already got it
-      if (!location) {
-        continue
-      }
-
-      if (meta.link) {
-        links.set(location, meta)
-      } else {
-        nodes.set(location, this.#loadNode(location, meta))
-      }
-    }
-    return { links, nodes }
-  }
-
   // links is the set of metadata, and nodes is the map of non-Link nodes
   // Set the targets to nodes in the set, if we have them (we might not)
+  // XXX build-ideal-tree also has a #resolveLinks, is there overlap?
   async #resolveLinks (links, nodes) {
     for (const [location, meta] of links.entries()) {
       const targetPath = resolve(this.path, meta.resolved)
