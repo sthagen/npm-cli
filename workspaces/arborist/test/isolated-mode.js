@@ -309,6 +309,65 @@ tap.test('simple peer dependencies scenarios', async t => {
   rule7.apply(t, dir, resolved, asserted)
 })
 
+tap.test('peer dependencies with legacyPeerDeps', async t => {
+  /*
+   * With legacyPeerDeps, peer dep edges are not created on the node.
+   * The linked strategy should still place peer deps alongside the
+   * package in the store so require() works from the real path.
+   *
+   * root -> phpegjs
+   *         phpegjs -> pegjs (peer dep, no edge with legacyPeerDeps)
+   * root -> pegjs
+   */
+
+  const graph = {
+    registry: [
+      { name: 'phpegjs', version: '1.0.0', peerDependencies: { pegjs: '*', missing: '*' } },
+      { name: 'pegjs', version: '2.0.0' },
+      {
+        name: 'adapter',
+        version: '1.0.0',
+        dependencies: { pegjs: '*' },
+        peerDependencies: { pegjs: '*' },
+      },
+    ],
+    root: {
+      name: 'foo',
+      version: '1.2.3',
+      dependencies: { phpegjs: '1.0.0', pegjs: '2.0.0', adapter: '1.0.0' },
+    },
+  }
+
+  const resolved = {
+    'foo@1.2.3 (root)': {
+      'phpegjs@1.0.0': {
+        'pegjs@2.0.0 (peer)': {},
+      },
+      'pegjs@2.0.0': {},
+      'adapter@1.0.0': {
+        'pegjs@2.0.0': {},
+      },
+    },
+  }
+
+  const { dir, registry } = await getRepo(graph)
+
+  const cache = fs.mkdtempSync(`${getTempDir()}/test-`)
+  const arborist = new Arborist({ path: dir, registry, packumentCache: new Map(), cache, legacyPeerDeps: true })
+  await arborist.reify({ installStrategy: 'linked' })
+
+  // phpegjs should be able to require its peer dep pegjs
+  t.ok(setupRequire(dir)('phpegjs', 'pegjs'),
+    'phpegjs can require peer dep pegjs with legacyPeerDeps')
+
+  const asserted = new Set()
+  rule1.apply(t, dir, resolved, asserted)
+  rule2.apply(t, dir, resolved, asserted)
+  rule3.apply(t, dir, resolved, asserted)
+  rule5.apply(t, dir, resolved, asserted)
+  rule7.apply(t, dir, resolved, asserted)
+})
+
 tap.test('Lock file is same in hoisted and in isolated mode', async t => {
   const graph = {
     registry: [
@@ -1297,6 +1356,113 @@ tap.test('scoped package', async t => {
   rule2.apply(t, dir, resolved, asserted)
   rule3.apply(t, dir, resolved, asserted)
   rule4.apply(t, dir, resolved, asserted)
+  rule7.apply(t, dir, resolved, asserted)
+})
+
+tap.test('scoped workspace packages', async t => {
+  /*
+   * Dependency graph:
+   *
+   * root -> @scope/package-b (workspace)
+   *         @scope/package-b -> @scope/package-a (workspace)
+   * root -> @scope/package-a (workspace)
+   */
+
+  const graph = {
+    registry: [
+      { name: 'which', version: '1.0.0' },
+    ],
+    root: {
+      name: 'myproject', version: '1.0.0', dependencies: { '@scope/package-a': '*', '@scope/package-b': '*' },
+    },
+    workspaces: [
+      { name: '@scope/package-a', version: '1.0.0', dependencies: { which: '1.0.0' } },
+      { name: '@scope/package-b', version: '1.0.0', dependencies: { '@scope/package-a': '*' } },
+    ],
+  }
+
+  const resolved = {
+    'myproject@1.0.0 (root)': {
+      '@scope/package-a@1.0.0 (workspace)': {
+        'which@1.0.0': {},
+      },
+      '@scope/package-b@1.0.0 (workspace)': {
+        '@scope/package-a@1.0.0 (workspace)': {
+          'which@1.0.0': {},
+        },
+      },
+    },
+  }
+
+  const { dir, registry } = await getRepo(graph)
+
+  const cache = fs.mkdtempSync(`${getTempDir()}/test-`)
+  const arborist = new Arborist({ path: dir, registry, packumentCache: new Map(), cache })
+  await arborist.reify({ installStrategy: 'linked' })
+
+  const asserted = new Set()
+  rule1.apply(t, dir, resolved, asserted)
+  rule2.apply(t, dir, resolved, asserted)
+  rule3.apply(t, dir, resolved, asserted)
+  rule4.apply(t, dir, resolved, asserted)
+  rule7.apply(t, dir, resolved, asserted)
+})
+
+tap.test('aliased packages in workspace', async t => {
+  /*
+   * Dependency graph:
+   *
+   * root -> prettier (alias for npm:custom-prettier@3.0.3)
+   *         custom-prettier -> isexe
+   * root -> my-pkg (workspace)
+   *         my-pkg -> prettier (alias for npm:custom-prettier@3.0.3)
+   */
+
+  const graph = {
+    registry: [
+      { name: 'custom-prettier', version: '3.0.3', dependencies: { isexe: '1.0.0' } },
+      { name: 'isexe', version: '1.0.0' },
+    ],
+    root: {
+      name: 'myproject',
+      version: '1.0.0',
+      dependencies: { prettier: 'npm:custom-prettier@3.0.3' },
+    },
+    workspaces: [
+      { name: 'my-pkg', version: '1.0.0', dependencies: { prettier: 'npm:custom-prettier@3.0.3' } },
+    ],
+  }
+
+  const resolved = {
+    'myproject@1.0.0 (root)': {
+      'prettier@3.0.3': {
+        'isexe@1.0.0': {},
+      },
+      'my-pkg@1.0.0 (workspace)': {
+        'prettier@3.0.3': {
+          'isexe@1.0.0': {},
+        },
+      },
+    },
+  }
+
+  const { dir, registry } = await getRepo(graph)
+
+  const cache = fs.mkdtempSync(`${getTempDir()}/test-`)
+  const arborist = new Arborist({ path: dir, registry, packumentCache: new Map(), cache })
+  await arborist.reify({ installStrategy: 'linked' })
+
+  // Verify symlink uses alias name, not real package name
+  t.ok(setupRequire(dir)('prettier'), 'root can require via alias "prettier"')
+  t.notOk(
+    pathExists(path.join(dir, 'node_modules', 'custom-prettier')),
+    'no custom-prettier symlink at root node_modules'
+  )
+
+  const asserted = new Set()
+  rule1.apply(t, dir, resolved, asserted)
+  rule2.apply(t, dir, resolved, asserted)
+  rule3.apply(t, dir, resolved, asserted)
   rule7.apply(t, dir, resolved, asserted)
 })
 

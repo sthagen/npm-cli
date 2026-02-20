@@ -157,6 +157,33 @@ _authToken=MYTOKEN
 //somewhere-else.com/another/:_authToken=MYTOKEN2
 ```
 
+### Custom / third-party config keys
+
+npm only recognizes its own [configuration options](/using-npm/config).
+If your `.npmrc` contains keys that are not part of npm's config definitions
+(for example, `electron_mirror` or `sass_binary_site`), npm will emit a
+warning:
+
+```
+warn Unknown user config "electron_mirror".
+This will stop working in the next major version of npm.
+```
+
+These keys were historically tolerated but are not officially supported.
+A future major version of npm will treat unknown top-level keys as errors.
+
+Some tools (such as `@electron/get` or `node-sass`) read their own
+configuration from environment variables or from `.npmrc` by convention.
+You can set these values as environment variables instead:
+
+```bash
+export ELECTRON_MIRROR="https://mirrorexample.npmjs.org/mirrors/electron/"
+export ELECTRON_CUSTOM_DIR="{{ version }}"
+```
+
+Environment variables are the most portable approach and work regardless
+of `.npmrc` format.
+
 ### See also
 
 * [npm folders](/configuring-npm/folders)
