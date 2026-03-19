@@ -12,7 +12,6 @@ graph LR;
   bin-links-->write-file-atomic;
   cacache-->npmcli-fs["@npmcli/fs"];
   cacache-->ssri;
-  cacache-->unique-filename;
   init-package-json-->npm-package-arg;
   init-package-json-->npmcli-package-json["@npmcli/package-json"];
   init-package-json-->promzard;
@@ -80,6 +79,7 @@ graph LR;
   make-fetch-happen-->cacache;
   make-fetch-happen-->minipass-fetch;
   make-fetch-happen-->npmcli-agent["@npmcli/agent"];
+  make-fetch-happen-->npmcli-redact["@npmcli/redact"];
   make-fetch-happen-->proc-log;
   make-fetch-happen-->ssri;
   nopt-->abbrev;
@@ -246,7 +246,6 @@ graph LR;
   parse-conflict-json-->json-parse-even-better-errors;
   promzard-->read;
   read-->mute-stream;
-  unique-filename-->unique-slug;
 ```
 
 ## all dependencies
@@ -268,11 +267,9 @@ graph LR;
   cacache-->npmcli-fs["@npmcli/fs"];
   cacache-->p-map;
   cacache-->ssri;
-  cacache-->unique-filename;
   debug-->ms;
   fdir-->picomatch;
   fs-minipass-->minipass;
-  gar-promise-retry-->retry;
   glob-->minimatch;
   glob-->minipass;
   glob-->path-scurry;
@@ -390,6 +387,7 @@ graph LR;
   make-fetch-happen-->minipass;
   make-fetch-happen-->negotiator;
   make-fetch-happen-->npmcli-agent["@npmcli/agent"];
+  make-fetch-happen-->npmcli-redact["@npmcli/redact"];
   make-fetch-happen-->proc-log;
   make-fetch-happen-->ssri;
   minimatch-->brace-expansion;
@@ -674,8 +672,6 @@ graph LR;
   path-scurry-->minipass;
   postcss-selector-parser-->cssesc;
   postcss-selector-parser-->util-deprecate;
-  promise-retry-->err-code;
-  promise-retry-->retry;
   promzard-->read;
   read-->mute-stream;
   sigstore-->sigstore-bundle["@sigstore/bundle"];
@@ -685,9 +681,9 @@ graph LR;
   sigstore-->sigstore-tuf["@sigstore/tuf"];
   sigstore-->sigstore-verify["@sigstore/verify"];
   sigstore-bundle-->sigstore-protobuf-specs["@sigstore/protobuf-specs"];
+  sigstore-sign-->gar-promise-retry["@gar/promise-retry"];
   sigstore-sign-->make-fetch-happen;
   sigstore-sign-->proc-log;
-  sigstore-sign-->promise-retry;
   sigstore-sign-->sigstore-bundle["@sigstore/bundle"];
   sigstore-sign-->sigstore-core["@sigstore/core"];
   sigstore-sign-->sigstore-protobuf-specs["@sigstore/protobuf-specs"];
@@ -716,8 +712,6 @@ graph LR;
   tuf-js-->tufjs-models["@tufjs/models"];
   tufjs-models-->minimatch;
   tufjs-models-->tufjs-canonical-json["@tufjs/canonical-json"];
-  unique-filename-->unique-slug;
-  unique-slug-->imurmurhash;
   which-->isexe;
   write-file-atomic-->signal-exit;
 ```
@@ -737,5 +731,5 @@ packages higher up the chain.
  - @npmcli/package-json, npm-registry-fetch
  - @npmcli/git, make-fetch-happen
  - @npmcli/smoke-tests, @npmcli/installed-package-contents, npm-pick-manifest, cacache, promzard
- - @npmcli/docs, @npmcli/fs, npm-bundled, @npmcli/promise-spawn, npm-install-checks, npm-package-arg, unique-filename, npm-packlist, bin-links, nopt, parse-conflict-json, @npmcli/mock-globals, read
- - @npmcli/eslint-config, @npmcli/template-oss, ignore-walk, semver, npm-normalize-package-bin, @npmcli/name-from-folder, which, ini, hosted-git-info, proc-log, validate-npm-package-name, json-parse-even-better-errors, ssri, unique-slug, @npmcli/node-gyp, @npmcli/redact, @npmcli/agent, minipass-fetch, @npmcli/query, cmd-shim, read-cmd-shim, write-file-atomic, abbrev, proggy, minify-registry-metadata, mute-stream, npm-audit-report, npm-user-validate
+ - @npmcli/docs, @npmcli/fs, npm-bundled, @npmcli/promise-spawn, npm-install-checks, npm-package-arg, npm-packlist, bin-links, nopt, parse-conflict-json, @npmcli/mock-globals, read
+ - @npmcli/eslint-config, @npmcli/template-oss, ignore-walk, semver, npm-normalize-package-bin, @npmcli/name-from-folder, which, ini, hosted-git-info, proc-log, validate-npm-package-name, json-parse-even-better-errors, ssri, @npmcli/node-gyp, @npmcli/redact, @npmcli/agent, minipass-fetch, @npmcli/query, cmd-shim, read-cmd-shim, write-file-atomic, abbrev, proggy, minify-registry-metadata, mute-stream, npm-audit-report, npm-user-validate

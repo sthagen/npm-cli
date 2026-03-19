@@ -1437,6 +1437,80 @@ t.test('exclusive options conflict', async t => {
   })
 })
 
+t.test('exclusive options both from env still conflict', async t => {
+  const path = t.testdir()
+  const config = new Config({
+    env: {
+      npm_config_aaa: 'true',
+      npm_config_zzz: 'true',
+    },
+    npmPath: __dirname,
+    argv: [
+      process.execPath,
+      __filename,
+    ],
+    cwd: join(`${path}/project`),
+    shorthands,
+    definitions: {
+      ...definitions,
+      ...createDef('aaa', {
+        default: false,
+        type: Boolean,
+        description: 'aaa',
+        exclusive: ['zzz'],
+      }),
+      ...createDef('zzz', {
+        default: false,
+        type: Boolean,
+        description: 'zzz',
+        exclusive: ['aaa'],
+      }),
+    },
+    flatten,
+  })
+  await t.rejects(config.load(), {
+    name: 'TypeError',
+    message: '--zzz cannot be provided when using --aaa',
+  })
+})
+
+t.test('exclusive env option is skipped when sibling is set via CLI', async t => {
+  const path = t.testdir()
+  const config = new Config({
+    env: {
+      npm_config_truth: 'true',
+    },
+    npmPath: __dirname,
+    argv: [
+      process.execPath,
+      __filename,
+      '--lie=true',
+    ],
+    cwd: join(`${path}/project`),
+    shorthands,
+    definitions: {
+      ...definitions,
+      ...createDef('truth', {
+        default: false,
+        type: Boolean,
+        description: 'The Truth',
+        exclusive: ['lie'],
+      }),
+      ...createDef('lie', {
+        default: false,
+        type: Boolean,
+        description: 'A Lie',
+        exclusive: ['truth'],
+      }),
+    },
+    flatten,
+  })
+  // should not throw — env `truth` is skipped because `lie` was set via CLI
+  await t.resolves(config.load())
+  t.equal(config.get('lie'), true, 'CLI lie is set')
+  t.equal(config.get('truth'), false, 'env truth is skipped, remains default')
+})
+
 t.test('env-replaced config from files is not clobbered when saving', async (t) => {
   const path = t.testdir()
   const opts = {
