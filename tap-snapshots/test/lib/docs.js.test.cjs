@@ -36,7 +36,6 @@ npm@{VERSION} {BASEDIR}
 exports[`test/lib/docs.js TAP command list > aliases 1`] = `
 Object {
   "add": "install",
-  "add-user": "adduser",
   "author": "owner",
   "c": "config",
   "cit": "install-ci-test",
@@ -81,6 +80,7 @@ Object {
   "sit": "install-ci-test",
   "t": "test",
   "tst": "test",
+  "u": "update",
   "udpate": "update",
   "un": "uninstall",
   "unlink": "uninstall",
@@ -97,7 +97,6 @@ Object {
 exports[`test/lib/docs.js TAP command list > commands 1`] = `
 Array [
   "access",
-  "adduser",
   "audit",
   "bugs",
   "cache",
@@ -148,8 +147,6 @@ Array [
   "search",
   "set",
   "shrinkwrap",
-  "star",
-  "stars",
   "start",
   "stop",
   "team",
@@ -159,7 +156,6 @@ Array [
   "undeprecate",
   "uninstall",
   "unpublish",
-  "unstar",
   "update",
   "version",
   "view",
@@ -2839,42 +2835,6 @@ Note: This command is unaware of workspaces.
 #### \`registry\`
 `
 
-exports[`test/lib/docs.js TAP usage adduser > must match snapshot 1`] = `
-Add a registry user account
-
-Usage:
-npm adduser
-
-Options:
-[--registry <registry>] [--scope <@scope>] [--auth-type <legacy|web>]
-
-  --registry
-    The base URL of the npm registry.
-
-  --scope
-    Associate an operation with a scope for a scoped registry.
-
-  --auth-type
-    What authentication strategy to use with \`login\`.
-
-
-alias: add-user
-
-Run "npm help adduser" for more info
-
-\`\`\`bash
-npm adduser
-
-alias: add-user
-\`\`\`
-
-Note: This command is unaware of workspaces.
-
-#### \`registry\`
-#### \`scope\`
-#### \`auth-type\`
-`
-
 exports[`test/lib/docs.js TAP usage audit > must match snapshot 1`] = `
 Run a security audit
 
@@ -5527,62 +5487,6 @@ Note: This command is unaware of workspaces.
 NO PARAMS
 `
 
-exports[`test/lib/docs.js TAP usage star > must match snapshot 1`] = `
-Mark your favorite packages
-
-Usage:
-npm star [<package-spec>...]
-
-Options:
-[--registry <registry>] [--unicode] [--otp <otp>]
-
-  --registry
-    The base URL of the npm registry.
-
-  --unicode
-    When set to true, npm uses unicode characters in the tree output.  When
-
-  --otp
-    This is a one-time password from a two-factor authenticator.  It's needed
-
-
-Run "npm help star" for more info
-
-\`\`\`bash
-npm star [<package-spec>...]
-\`\`\`
-
-Note: This command is unaware of workspaces.
-
-#### \`registry\`
-#### \`unicode\`
-#### \`otp\`
-`
-
-exports[`test/lib/docs.js TAP usage stars > must match snapshot 1`] = `
-View packages marked as favorites
-
-Usage:
-npm stars [<user>]
-
-Options:
-[--registry <registry>]
-
-  --registry
-    The base URL of the npm registry.
-
-
-Run "npm help stars" for more info
-
-\`\`\`bash
-npm stars [<user>]
-\`\`\`
-
-Note: This command is unaware of workspaces.
-
-#### \`registry\`
-`
-
 exports[`test/lib/docs.js TAP usage start > must match snapshot 1`] = `
 Start a package
 
@@ -5960,38 +5864,6 @@ npm unpublish [<package-spec>]
 #### \`workspaces\`
 `
 
-exports[`test/lib/docs.js TAP usage unstar > must match snapshot 1`] = `
-Remove an item from your favorite packages
-
-Usage:
-npm unstar [<package-spec>...]
-
-Options:
-[--registry <registry>] [--unicode] [--otp <otp>]
-
-  --registry
-    The base URL of the npm registry.
-
-  --unicode
-    When set to true, npm uses unicode characters in the tree output.  When
-
-  --otp
-    This is a one-time password from a two-factor authenticator.  It's needed
-
-
-Run "npm help unstar" for more info
-
-\`\`\`bash
-npm unstar [<package-spec>...]
-\`\`\`
-
-Note: This command is unaware of workspaces.
-
-#### \`registry\`
-#### \`unicode\`
-#### \`otp\`
-`
-
 exports[`test/lib/docs.js TAP usage update > must match snapshot 1`] = `
 Update packages
 
@@ -6071,14 +5943,14 @@ Options:
     When set file: protocol dependencies will be packed and installed as
 
 
-aliases: up, upgrade, udpate
+aliases: u, up, upgrade, udpate
 
 Run "npm help update" for more info
 
 \`\`\`bash
 npm update [<pkg>...]
 
-aliases: up, upgrade, udpate
+aliases: u, up, upgrade, udpate
 \`\`\`
 
 #### \`save\`
