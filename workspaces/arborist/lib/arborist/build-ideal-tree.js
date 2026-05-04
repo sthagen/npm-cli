@@ -446,6 +446,11 @@ module.exports = cls => class IdealTreeBuilder extends cls {
       const paths = await readdirScoped(nm).catch(() => [])
       for (const p of paths) {
         const name = p.replace(/\\/g, '/')
+        // Match loadActual behavior: hidden entries and retired scoped package
+        // folders are not installed global packages.
+        if (/^(@[^/]+\/)?\./.test(name)) {
+          continue
+        }
         const updateName = this[_updateNames].includes(name)
         if (this[_updateAll] || updateName) {
           if (updateName) {
@@ -898,8 +903,21 @@ This is a one-time fix-up, please be patient...
       // be forced to agree on a version of z.
       const required = new Set([edge.from])
       const parent = edge.peer ? virtualRoot : null
-      const dep = vrDep && vrDep.satisfies(edge) ? vrDep
-        : await this.#nodeFromEdge(edge, parent, null, required)
+      let dep = vrDep && vrDep.satisfies(edge) ? vrDep : null
+
+      // A peerOptional conflict can be resolved by finding an existing node in the tree that satisfies the edge, avoiding a registry fetch that may introduce an extraneous package. See npm/cli#9249.
+      // Skip the shortcut when the user has signaled an explicit re-fetch intent (npm update by name, explicit request, or audit fix), so we honor those signals rather than silently keeping the existing node.
+      const skipExistingShortcut = this[_updateNames].includes(edge.name)
+        || this.#explicitRequests.has(edge)
+        || (edge.to && this.auditReport?.isVulnerable(edge.to))
+      if (!dep && edge.type === 'peerOptional' && !skipExistingShortcut) {
+        dep = this.#findHoistableNode(
+          /* istanbul ignore next - resolveParent is always set for non-root nodes */
+          edge.from.resolveParent || edge.from, edge)
+      }
+      if (!dep) {
+        dep = await this.#nodeFromEdge(edge, parent, null, required)
+      }
 
       /* istanbul ignore next */
       debug(() => {
@@ -1027,6 +1045,24 @@ This is a one-time fix-up, please be patient...
 
     await promiseCallLimit(promises)
     return this.#buildDepStep()
+  }
+
+  // BFS descendants of `root` for a node satisfying `edge`.
+  // Prefers nodes closer to root.  Skips bundled nodes.
+  #findHoistableNode (root, edge) {
+    const queue = [...root.children.values()]
+    while (queue.length) {
+      const node = queue.shift()
+      if (node.name === edge.name
+        && !node.inDepBundle
+        && node.satisfies(edge)) {
+        return node
+      }
+      for (const child of node.children.values()) {
+        queue.push(child)
+      }
+    }
+    return null
   }
 
   // loads a node from an edge, and then loads its peer deps (and their peer deps, on down the line) into a virtual root parent.
