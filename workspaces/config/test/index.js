@@ -412,7 +412,7 @@ loglevel = yolo
       ['warn', 'invalid config', 'omit="cucumber"', 'set in command line options'],
       ['warn', 'invalid config', 'Must be one or more of:', 'dev, optional, peer'],
       ['warn', 'invalid config', 'access="blueberry"', 'set in command line options'],
-      ['warn', 'invalid config', 'Must be one of:', 'null, restricted, public'],
+      ['warn', 'invalid config', 'Must be one of:', 'null, restricted, public, private'],
       ['warn', 'invalid config', 'multiple-numbers="what kind of fruit is not a number"',
         'set in command line options'],
       ['warn', 'invalid config', 'Must be one or more', 'numeric value'],
@@ -608,7 +608,7 @@ loglevel = yolo
       ['warn', 'invalid config', 'omit="cucumber"', 'set in command line options'],
       ['warn', 'invalid config', 'Must be one or more of:', 'dev, optional, peer'],
       ['warn', 'invalid config', 'access="blueberry"', 'set in command line options'],
-      ['warn', 'invalid config', 'Must be one of:', 'null, restricted, public'],
+      ['warn', 'invalid config', 'Must be one of:', 'null, restricted, public, private'],
       ['warn', 'invalid config', 'multiple-numbers="what kind of fruit is not a number"',
         'set in command line options'],
       ['warn', 'invalid config', 'Must be one or more', 'numeric value'],
@@ -2313,5 +2313,48 @@ t.test('CLI --min-release-age beats env npm_config_min_release_age', async t => 
   t.ok(
     Math.abs(config.flat.before.getTime() - expected) < 60_000,
     'CLI --min-release-age=3 overrides env npm_config_min_release_age=30'
+  )
+})
+
+t.test('global-ignore-file defaults to ${prefix}/etc/npmignore', async t => {
+  const path = t.testdir()
+  const config = new Config({
+    npmPath: `${path}/npm`,
+    env: {},
+    argv: [process.execPath, __filename, '--prefix', `${path}/global`],
+    cwd: path,
+    definitions,
+    shorthands,
+    flatten,
+  })
+  await config.load()
+  t.equal(
+    config.get('global-ignore-file'),
+    resolve(`${path}/global/etc/npmignore`),
+    'computed from --prefix, mirrors globalconfig'
+  )
+  t.equal(config.flat.globalIgnoreFile, resolve(`${path}/global/etc/npmignore`), 'flattens to camelCase')
+})
+
+t.test('global-ignore-file follows an explicit override', async t => {
+  const path = t.testdir()
+  const config = new Config({
+    npmPath: `${path}/npm`,
+    env: {},
+    argv: [
+      process.execPath, __filename,
+      '--prefix', `${path}/global`,
+      '--global-ignore-file', `${path}/custom/.npmignore`,
+    ],
+    cwd: path,
+    definitions,
+    shorthands,
+    flatten,
+  })
+  await config.load()
+  t.equal(
+    config.get('global-ignore-file'),
+    resolve(`${path}/custom/.npmignore`),
+    'cli override wins over computed default'
   )
 })

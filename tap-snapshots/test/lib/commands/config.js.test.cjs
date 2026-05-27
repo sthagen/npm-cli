@@ -20,6 +20,9 @@ exports[`test/lib/commands/config.js TAP config list --json > output matches sna
   "allow-file": "all",
   "allow-git": "all",
   "allow-remote": "all",
+  "allow-scripts": [
+    ""
+  ],
   "also": null,
   "audit": true,
   "audit-level": null,
@@ -37,6 +40,7 @@ exports[`test/lib/commands/config.js TAP config list --json > output matches sna
   "cidr": null,
   "commit-hooks": true,
   "cpu": null,
+  "dangerously-allow-all-scripts": false,
   "depth": null,
   "description": true,
   "dev": false,
@@ -67,6 +71,7 @@ exports[`test/lib/commands/config.js TAP config list --json > output matches sna
   "git-tag-version": true,
   "global": false,
   "globalconfig": "{CWD}/global/etc/npmrc",
+  "global-ignore-file": "{CWD}/global/etc/npmignore",
   "global-style": false,
   "heading": "npm",
   "https-proxy": null,
@@ -125,6 +130,8 @@ exports[`test/lib/commands/config.js TAP config list --json > output matches sna
   "pack-destination": ".",
   "packages": [],
   "parseable": false,
+  "allow-scripts-pending": false,
+  "allow-scripts-pin": true,
   "prefer-dedupe": false,
   "prefer-offline": false,
   "prefer-online": false,
@@ -164,6 +171,7 @@ exports[`test/lib/commands/config.js TAP config list --json > output matches sna
   "sign-git-commit": false,
   "sign-git-tag": false,
   "strict-peer-deps": false,
+  "strict-allow-scripts": false,
   "strict-ssl": true,
   "tag-version-prefix": "v",
   "timing": false,
@@ -196,6 +204,9 @@ allow-file = "all"
 allow-git = "all"
 allow-remote = "all"
 allow-same-version = false
+allow-scripts = [""]
+allow-scripts-pending = false
+allow-scripts-pin = true
 also = null
 audit = true
 audit-level = null
@@ -215,6 +226,7 @@ cidr = null
 ; color = {COLOR}
 commit-hooks = true
 cpu = null
+dangerously-allow-all-scripts = false
 depth = null
 description = true
 dev = false
@@ -244,6 +256,7 @@ fund = true
 git = "git"
 git-tag-version = true
 global = false
+global-ignore-file = "{CWD}/global/etc/npmignore"
 global-style = false
 globalconfig = "{CWD}/global/etc/npmrc"
 heading = "npm"
@@ -343,6 +356,7 @@ searchstaleness = 900
 shell = "{SHELL}"
 sign-git-commit = false
 sign-git-tag = false
+strict-allow-scripts = false
 strict-peer-deps = false
 strict-ssl = true
 ; tag = "latest" ; overridden by project
