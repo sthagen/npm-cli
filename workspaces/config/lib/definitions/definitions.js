@@ -178,9 +178,10 @@ const definitions = {
     type: Boolean,
     short: 'a',
     description: `
-    When running \`npm outdated\` and \`npm ls\`, setting \`--all\` will show
-    all outdated or installed packages, rather than only those directly
-    depended upon by the current project.
+    Show or act on all packages, not just the ones your project directly
+    depends on. For \`npm outdated\` and \`npm ls\` this lists every outdated
+    or installed package. For \`npm approve-scripts\` and \`npm deny-scripts\`
+    it selects every package with pending install scripts.
   `,
     flatten,
   }),
@@ -224,13 +225,18 @@ const definitions = {
     flatten,
   }),
   'allow-git': new Definition('allow-git', {
-    default: 'all',
+    default: 'none',
     type: ['all', 'none', 'root'],
     description: `
       Limits the ability for npm to fetch dependencies from git references.
       That is, dependencies that point to a git repo instead of a version or semver range.
       Please note that this could leave your tree incomplete and some packages may not function as intended or designed.
       Changing this setting will not remove dependencies that are already installed.
+
+      As of npm 12 the default is \`none\`. Git dependencies run \`git\`
+      against a remote repo and may install configuration the project does
+      not control. Opt in explicitly per project (in \`.npmrc\`) or per
+      command (on the CLI) when you need git deps.
 
       \`all\` allows any git dependencies to be fetched and installed.
       \`none\` prevents any git dependencies from being fetched and installed.
@@ -239,13 +245,21 @@ const definitions = {
     flatten,
   }),
   'allow-remote': new Definition('allow-remote', {
-    default: 'all',
+    default: 'none',
     type: ['all', 'none', 'root'],
     description: `
       Limits the ability for npm to fetch dependencies from urls.
       That is, dependencies that point to a tarball url instead of a version or semver range.
       Please note that this could leave your tree incomplete and some packages may not function as intended or designed.
       Changing this setting will not remove dependencies that are already installed.
+
+      As of npm 12 the default is \`none\`. Tarballs that share a hostname
+      with the configured registry (the typical case for the npm registry,
+      GitHub Packages, and most private registries) are still installed
+      normally. If your registry serves tarballs from a different host,
+      set \`replace-registry-host\` or override this setting. Opt in
+      explicitly per project (in \`.npmrc\`) or per command (on the CLI)
+      when you intentionally install from a URL.
 
       \`all\` allows any url to be installed.
       \`none\` prevents any url from being installed.
@@ -2347,13 +2361,13 @@ const definitions = {
       If you ask npm to install a package and don't tell it a specific version,
       then it will install the specified tag.
 
-      It is the tag added to the package@version specified in the 
+      It is the tag added to the package@version specified in the
       \`npm dist-tag add\` command, if no explicit tag is given.
 
       When used by the \`npm diff\` command, this is the tag used to fetch the
       tarball that will be compared with the local files by default.
-      
-      If used in the \`npm publish\` command, this is the tag that will be 
+
+      If used in the \`npm publish\` command, this is the tag that will be
       added to the package submitted to the registry.
     `,
     flatten (key, obj, flatOptions) {
