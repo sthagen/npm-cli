@@ -38,9 +38,10 @@ module.exports = cls => class IsolatedReifier extends cls {
   #processedEdges = new Set()
   #workspaceProxies = new Map()
 
-  #generateChild (node, location, pkg, isInStore, root) {
+  #generateChild (node, location, pkg, isInStore, root, inBundle = false) {
     const newChild = new IsolatedNode({
       isInStore,
+      inBundle,
       location,
       name: node.packageName || node.name,
       optional: node.optional,
@@ -213,6 +214,22 @@ module.exports = cls => class IsolatedReifier extends cls {
     // local `file:` deps (non-workspace fsChildren) should be treated as local dependencies, not external, so they get symlinked directly instead of being extracted into the store.
     const isLocal = (n) => n.isWorkspace || node.fsChildren?.has(n)
     const optionalDeps = edges.filter(edge => edge.optional).map(edge => edge.to.target)
+
+    // Optional peers declared only in peerDependenciesMeta (e.g. `@types/react`) have no edge, so the materialization above misses them.
+    // Resolve each from the tree and link it; if nobody provides it, node.resolve finds nothing and it stays omitted.
+    const peerMeta = node.package.peerDependenciesMeta
+    if (peerMeta) {
+      const resolvedNames = new Set([...nonOptionalDeps, ...optionalDeps].map(n => n.name))
+      for (const peerName in peerMeta) {
+        if (!peerMeta[peerName]?.optional || resolvedNames.has(peerName)) {
+          continue
+        }
+        const resolved = node.resolve(peerName)?.target
+        if (resolved && resolved !== node && !resolved.inert && !isLocal(resolved)) {
+          optionalDeps.push(resolved)
+        }
+      }
+    }
     result.localDependencies = await Promise.all(nonOptionalDeps.filter(isLocal).map(n => this.#workspaceProxy(n)))
     result.externalDependencies = await Promise.all(nonOptionalDeps.filter(n => !isLocal(n) && !n.inert).map(n => this.#externalProxy(n)))
     result.externalOptionalDependencies = await Promise.all(optionalDeps.filter(n => !n.inert).map(n => this.#externalProxy(n)))
@@ -327,7 +344,7 @@ module.exports = cls => class IsolatedReifier extends cls {
     })
 
     bundledTree.nodes.forEach(node => {
-      this.#generateChild(node, node.location, node.pkg, false, root)
+      this.#generateChild(node, node.location, node.pkg, false, root, true)
     })
 
     bundledTree.edges.forEach(edge => {

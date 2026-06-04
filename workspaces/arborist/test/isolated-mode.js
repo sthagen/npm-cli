@@ -1310,6 +1310,56 @@ tap.test('failing optional peer deps are not installed', async t => {
   t.notOk(setupRequire(dir)('bar', 'which'), 'Failing optional peer deps should not be installed')
 })
 
+tap.test('optional peer declared only in peerDependenciesMeta is materialized when provided', async t => {
+  // Regression for npm/cli#9460.
+  // `bar` declares `which` as an optional peer via peerDependenciesMeta only, with no peerDependencies entry, so no edge is created for it.
+  // The workspace provides `which`, so under the linked strategy `which` should be linked into `bar`'s store node_modules (matching pnpm).
+  // `which` is not a root dependency, so it is not hoisted to the top-level node_modules where parent-dir lookup would mask the result.
+  const graph = {
+    registry: [
+      { name: 'which', version: '1.0.0' },
+      { name: 'bar', version: '1.0.0', peerDependenciesMeta: { which: { optional: true } } },
+    ],
+    root: { name: 'foo', version: '1.2.3' },
+    workspaces: [
+      { name: 'app', version: '1.0.0', dependencies: { bar: '*', which: '1.0.0' } },
+    ],
+  }
+
+  const { dir, registry } = await getRepo(graph)
+
+  // Note that we override this cache to prevent interference from other tests
+  const cache = fs.mkdtempSync(`${getTempDir()}/test-`)
+  const arborist = new Arborist({ path: dir, registry, packumentCache: new Map(), cache })
+  await arborist.reify({ installStrategy: 'linked' })
+
+  t.ok(setupRequire(path.join(dir, 'packages', 'app'))('bar', 'which'),
+    'optional peer provided by the workspace is materialized into bar store node_modules')
+})
+
+tap.test('optional peer declared only in peerDependenciesMeta is omitted when not provided', async t => {
+  // Counterpart to the regression above: when nobody provides the optional peer it must stay omitted, preserving "optional" semantics.
+  const graph = {
+    registry: [
+      { name: 'bar', version: '1.0.0', peerDependenciesMeta: { which: { optional: true } } },
+    ],
+    root: { name: 'foo', version: '1.2.3' },
+    workspaces: [
+      { name: 'app', version: '1.0.0', dependencies: { bar: '*' } },
+    ],
+  }
+
+  const { dir, registry } = await getRepo(graph)
+
+  // Note that we override this cache to prevent interference from other tests
+  const cache = fs.mkdtempSync(`${getTempDir()}/test-`)
+  const arborist = new Arborist({ path: dir, registry, packumentCache: new Map(), cache })
+  await arborist.reify({ installStrategy: 'linked' })
+
+  t.notOk(setupRequire(path.join(dir, 'packages', 'app'))('bar', 'which'),
+    'optional peer that nobody provides is not materialized')
+})
+
 // Virtual packages are 2 packages that have the same version but are
 // duplicated on disk to solve peer-dependency conflict.
 tap.test('virtual packages', async t => {
@@ -1383,7 +1433,7 @@ tap.test('postinstall scripts are run', async t => {
 
   // Note that we override this cache to prevent interference from other tests
   const cache = fs.mkdtempSync(`${getTempDir()}/test-`)
-  const arborist = new Arborist({ path: dir, registry, packumentCache: new Map(), cache })
+  const arborist = new Arborist({ path: dir, registry, packumentCache: new Map(), cache, dangerouslyAllowAllScripts: true })
   await arborist.reify({ installStrategy: 'linked' })
 
   const postInstallRanWhich = pathExists(`${setupRequire(dir)('which')}/postInstallRanWhich`)
@@ -1415,7 +1465,7 @@ tap.test('postinstall scripts run once for store packages', async t => {
   const { dir, registry } = await getRepo(graph)
 
   const cache = fs.mkdtempSync(`${getTempDir()}/test-`)
-  const arborist = new Arborist({ path: dir, registry, packumentCache: new Map(), cache })
+  const arborist = new Arborist({ path: dir, registry, packumentCache: new Map(), cache, dangerouslyAllowAllScripts: true })
   await arborist.reify({ installStrategy: 'linked' })
 
   const whichDir = setupRequire(dir)('which')
@@ -1758,6 +1808,85 @@ tap.test('orphaned store entries are cleaned up on dependency update', async t =
     'store has which@2.0.0 entry after update')
   t.notOk(entriesAfterV2.some(e => e.startsWith('which@1.0.0-')),
     'old which@1.0.0 store entry is removed after update')
+})
+
+tap.test('orphaned scoped store entries are cleaned up on dependency update', async t => {
+  // https://github.com/npm/cli/issues/9440 — a scoped store key spans two path segments (.store/@scope/pkg@version-hash), so the single-segment orphan cleanup never swept the stale entry.
+  const graph = {
+    registry: [
+      { name: '@scope/which', version: '1.0.0', dependencies: { isexe: '^1.0.0' } },
+      { name: '@scope/which', version: '2.0.0', dependencies: { isexe: '^1.0.0' } },
+      { name: 'isexe', version: '1.0.0' },
+    ],
+    root: {
+      name: 'myproject',
+      version: '1.0.0',
+      dependencies: { '@scope/which': '1.0.0' },
+    },
+  }
+  const { dir, registry } = await getRepo(graph)
+  const cache = fs.mkdtempSync(`${getTempDir()}/test-`)
+  const storeDir = path.join(dir, 'node_modules', '.store')
+  const scopeDir = path.join(storeDir, '@scope')
+
+  // First install — @scope/which@1.0.0
+  const arb1 = new Arborist({ path: dir, registry, packumentCache: new Map(), cache })
+  await arb1.reify({ installStrategy: 'linked' })
+
+  const entriesAfterV1 = fs.readdirSync(scopeDir)
+  t.ok(entriesAfterV1.some(e => e.startsWith('which@1.0.0-')),
+    'store has @scope/which@1.0.0 entry after first install')
+
+  // Update package.json to depend on @scope/which@2.0.0
+  const pkgPath = path.join(dir, 'package.json')
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
+  pkg.dependencies['@scope/which'] = '2.0.0'
+  fs.writeFileSync(pkgPath, JSON.stringify(pkg))
+
+  // Second install — @scope/which@2.0.0
+  const arb2 = new Arborist({ path: dir, registry, packumentCache: new Map(), cache })
+  await arb2.reify({ installStrategy: 'linked' })
+
+  const entriesAfterV2 = fs.readdirSync(scopeDir)
+  t.ok(entriesAfterV2.some(e => e.startsWith('which@2.0.0-')),
+    'store has @scope/which@2.0.0 entry after update')
+  t.notOk(entriesAfterV2.some(e => e.startsWith('which@1.0.0-')),
+    'old @scope/which@1.0.0 store entry is removed after update')
+})
+
+tap.test('orphaned scoped store entries leave no empty scope directory when last dep is removed', async t => {
+  // https://github.com/npm/cli/issues/9440 — when the last package under a scope is orphaned, the now-empty @scope directory should also be pruned.
+  const graph = {
+    registry: [
+      { name: '@scope/which', version: '1.0.0', dependencies: { isexe: '^1.0.0' } },
+      { name: 'isexe', version: '1.0.0' },
+    ],
+    root: {
+      name: 'myproject',
+      version: '1.0.0',
+      dependencies: { '@scope/which': '1.0.0' },
+    },
+  }
+  const { dir, registry } = await getRepo(graph)
+  const cache = fs.mkdtempSync(`${getTempDir()}/test-`)
+  const storeDir = path.join(dir, 'node_modules', '.store')
+
+  const arb1 = new Arborist({ path: dir, registry, packumentCache: new Map(), cache })
+  await arb1.reify({ installStrategy: 'linked' })
+
+  t.ok(fs.existsSync(path.join(storeDir, '@scope')), 'store has @scope directory after install')
+
+  // Remove the dependency
+  const pkgPath = path.join(dir, 'package.json')
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
+  delete pkg.dependencies
+  fs.writeFileSync(pkgPath, JSON.stringify(pkg))
+
+  const arb2 = new Arborist({ path: dir, registry, packumentCache: new Map(), cache })
+  await arb2.reify({ installStrategy: 'linked' })
+
+  t.notOk(fs.existsSync(path.join(storeDir, '@scope')),
+    'empty @scope directory is pruned after the last scoped dep is removed')
 })
 
 tap.test('orphaned store entries are cleaned up on dependency removal', async t => {

@@ -15,9 +15,18 @@ records which of your dependencies are permitted to run install scripts
 (`preinstall`, `install`, `postinstall`, and `prepare` for non-registry
 sources). This command is the recommended way to maintain that field.
 
-In the current release, this field is advisory: install scripts still run
-by default, but installs print a list of packages whose scripts have not
-been reviewed. A future release will block unreviewed install scripts.
+Dependency install scripts are blocked by default. Install commands
+silently skip lifecycle scripts for any dependency that does not have a
+matching entry in `allowScripts`, and end with a list of the packages
+whose scripts were skipped so you can review them with this command.
+
+This command only works inside a project that has a `package.json`. It does
+not apply to global installs (`npm install -g`) or one-off executions
+(`npm exec` / `npx`), which have no project `package.json` to write to and
+will fail with an `EGLOBAL` error. To allow install scripts in those
+contexts, use the `--allow-scripts` flag at install time (for example
+`npm install -g --allow-scripts=canvas,sharp`) or persist the setting with
+`npm config set allow-scripts=canvas,sharp --location=user`.
 
 There are three modes:
 
