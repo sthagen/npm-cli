@@ -118,6 +118,56 @@ t.test('file path — exact resolved match', t => {
   t.end()
 })
 
+t.test('file path — link target matches incoming link source', t => {
+  const targetPath = require('node:path').resolve('local-pkg')
+  const target = node({
+    name: 'local-pkg',
+    packageName: 'local-pkg',
+    version: '1.0.0',
+  })
+  target.resolved = null
+  target.path = targetPath
+  target.realpath = targetPath
+  target.linksIn = new Set([{ resolved: 'file:../local-pkg' }])
+
+  t.equal(isScriptAllowed(target, { 'file:../local-pkg': true }), true)
+  t.equal(isScriptAllowed(target, { 'file:local-pkg': true }), true)
+  t.equal(isScriptAllowed(target, { 'file:../local-pkg': false }), false)
+  t.equal(isScriptAllowed(target, { 'file:../other': true }), null)
+  t.end()
+})
+
+t.test('file path — registry nodes do not match by install path', t => {
+  const reg = node({
+    name: 'sharp',
+    packageName: 'sharp',
+    version: '0.33.0',
+    path: 'node_modules/sharp',
+    realpath: require('node:path').resolve('node_modules/sharp'),
+    linksIn: new Set(),
+  })
+
+  t.equal(isScriptAllowed(reg, { 'file:node_modules/sharp': true }), null)
+  t.end()
+})
+
+t.test('file path — empty link sets do not add install paths', t => {
+  const targetPath = require('node:path').resolve('local-pkg')
+  const target = node({
+    name: 'local-pkg',
+    packageName: 'local-pkg',
+    version: '1.0.0',
+  })
+  target.resolved = null
+  target.path = targetPath
+  target.realpath = targetPath
+  target.linksIn = new Set()
+
+  t.equal(isScriptAllowed(target, { 'file:local-pkg': true }), null)
+  t.equal(isScriptAllowed(target, { [targetPath]: true }), null)
+  t.end()
+})
+
 t.test('directory key — npa parses absolute paths as type=directory', t => {
   // npa treats absolute paths as { type: 'directory' }, which the
   // matcher shares with the 'file' case. path.resolve produces a
@@ -402,6 +452,7 @@ t.test('isolated mode (linked): bundled IsolatedNode is blocked', async t => {
 
   const store = new IsolatedNode({
     isInStore: true,
+    isRegistryDependency: true, // carried from the source node by #externalProxy
     location: 'node_modules/.store/store-pkg@1.0.0/node_modules/store-pkg',
     name: 'store-pkg',
     package: { name: 'store-pkg', version: '1.0.0' },
