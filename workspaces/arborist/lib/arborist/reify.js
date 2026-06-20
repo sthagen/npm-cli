@@ -24,6 +24,8 @@ const debug = require('../debug.js')
 const onExit = require('../signal-handling.js')
 const optionalSet = require('../optional-set.js')
 const relpath = require('../relpath.js')
+const { applyPatchToDir, patchIntegrity } = require('../patch.js')
+const { readFile } = require('node:fs/promises')
 const retirePath = require('../retire-path.js')
 const treeCheck = require('../tree-check.js')
 const { defaultLockfileVersion } = require('../shrinkwrap.js')
@@ -720,6 +722,7 @@ module.exports = cls => class Reifier extends cls {
         const { content: pkg } = await PackageJson.normalize(node.path)
         node.package.scripts = pkg.scripts
       }
+      await this.#applyPatch(node)
       return
     }
 
@@ -747,10 +750,61 @@ module.exports = cls => class Reifier extends cls {
     return symlink(rel, node.path, 'junction')
   }
 
+  // apply a registered patch to a freshly extracted node, after extract and before rebuild
+  async #applyPatch (node) {
+    if (!node.patched) {
+      return
+    }
+    const { path: patchPath, integrity } = node.patched
+
+    // validate the patch file here too, since reify can run on an ideal tree that skipped resolvePatchedDependencies
+    let contents
+    try {
+      contents = await readFile(resolve(this.path, patchPath))
+    } catch {
+      throw Object.assign(
+        new Error(`patch file not found: ${patchPath}`),
+        { code: 'EPATCHNOTFOUND', path: patchPath, node: node.name }
+      )
+    }
+    if (patchIntegrity(contents) !== integrity) {
+      throw Object.assign(
+        new Error(`patch file ${patchPath} does not match the recorded integrity`),
+        { code: 'EPATCHINTEGRITY', path: patchPath, node: node.name }
+      )
+    }
+
+    try {
+      await applyPatchToDir({ patch: contents, cwd: node.path })
+    } catch (er) {
+      if (this.options.ignorePatchFailures) {
+        // the linked side-store keys a package by its patch, so an unpatched package cannot be represented at a patched key and would be trusted on later installs
+        if (node.isInStore) {
+          throw Object.assign(
+            new Error(`Cannot skip the failed patch for ${node.name} under install-strategy=linked. ` +
+              `Fix the patch or install with a different strategy.`),
+            { code: 'EPATCHFAILED', path: patchPath, node: node.name }
+          )
+        }
+        log.warn('patch', `failed to apply ${patchPath} to ${node.name}: ${er.message}`)
+        // the patch was not applied, so do not record it in the lockfile
+        // the lockfile and package.json now disagree, so warn that npm ci will reject the tree
+        log.warn('patch', `${node.name} was installed unpatched; package.json still declares this patch, so the lockfile is out of sync and \`npm ci\` will fail until the patch is fixed or its patchedDependencies entry is removed`)
+        node.patched = null
+        return
+      }
+      throw er
+    }
+  }
+
   // if the node is optional, then the failure of the promise is nonfatal
   // just add it and its optional set to the trash list.
   [_handleOptionalFailure] (node, p) {
-    return (node.optional ? p.catch(() => {
+    return (node.optional ? p.catch((er) => {
+      // a declared patch must apply or fail loudly, even on an optional dep
+      if (typeof er?.code === 'string' && er.code.startsWith('EPATCH')) {
+        throw er
+      }
       const set = optionalSet(node)
       for (const node of set) {
         log.verbose('reify', 'failed optional dependency', node.path)
@@ -851,12 +905,14 @@ module.exports = cls => class Reifier extends cls {
       return false
     }
     try {
-      const resolved = new URL(node.resolved)
+      // Match the effective fetch URL, not the raw lockfile value.
+      // #registryResolved applies replace-registry-host, rewriting a public-registry pin to the configured proxy/mirror so it matches.
+      const resolvedURL = new URL(this.#registryResolved(node.resolved))
       // pickRegistry only consults spec.scope, so a bare-name (tag) parse is sufficient and avoids a node.version dependency.
       const registry = new URL(pickRegistry(npa(node.name), this.options))
       const registryPath = registry.pathname.replace(/\/?$/, '/')
-      return resolved.origin === registry.origin &&
-        (registryPath === '/' || resolved.pathname.startsWith(registryPath))
+      return resolvedURL.origin === registry.origin &&
+        (registryPath === '/' || resolvedURL.pathname.startsWith(registryPath))
     } catch {
       return false
     }
@@ -1617,7 +1673,7 @@ module.exports = cls => class Reifier extends cls {
           // save the git+https url if it has auth; otherwise, shortcut
           const h = req.hosted
           const opt = { noCommittish: false }
-          if (h.https && h.auth) {
+          if (h.https && (h.auth || h.default === 'https')) {
             newSpec = `git+${h.https(opt)}`
           } else {
             newSpec = h.shortcut(opt)
@@ -1772,6 +1828,8 @@ module.exports = cls => class Reifier extends cls {
           // field so defaulting this to an empty array would add that field to
           // every package.json file.
           bundleDependencies,
+          // resolvePatchedDependencies drops entries orphaned by uninstall; persist that removal
+          patchedDependencies,
         } = tree.package
 
         pkgJson.update({
@@ -1780,6 +1838,7 @@ module.exports = cls => class Reifier extends cls {
           optionalDependencies,
           peerDependencies,
           bundleDependencies,
+          patchedDependencies,
         })
         await pkgJson.save()
       }

@@ -25,6 +25,8 @@ const debug = require('../debug.js')
 const fromPath = require('../from-path.js')
 const calcDepFlags = require('../calc-dep-flags.js')
 const { isReleaseAgeExcluded, trustedSpecName } = require('../release-age-exclude.js')
+const { resolvePatchedDependencies } = require('../patched-dependencies.js')
+const PackageExtensions = require('../package-extensions.js')
 const Shrinkwrap = require('../shrinkwrap.js')
 const { defaultLockfileVersion } = Shrinkwrap
 const Node = require('../node.js')
@@ -97,6 +99,7 @@ module.exports = cls => class IdealTreeBuilder extends cls {
   #loadFailures = new Set()
   #manifests = new Map()
   #mutateTree = false
+  #packageExtensions = null
   // a map of each module in a peer set to the thing that depended on
   // that set of peers in the first place.  Use a WeakMap so that we
   // don't hold onto references for nodes that are garbage collected.
@@ -174,12 +177,19 @@ module.exports = cls => class IdealTreeBuilder extends cls {
 
     try {
       await this.#initTree()
+      this.#loadPackageExtensions()
       await this.#inflateAncientLockfile()
       await this.#applyUserRequests(options)
       await this.#buildDeps()
       await this.#fixDepFlags()
       await this.#pruneFailedOptional()
       await this.#checkEngineAndPlatform()
+      await resolvePatchedDependencies(this.idealTree, {
+        path: this.path,
+        allowUnusedPatches: this.options.allowUnusedPatches,
+        rm: options.rm || [],
+      })
+      this.#warnWorkspacePackageExtensions()
     } finally {
       timeEnd()
       this.finishTracker('idealTree')
@@ -223,6 +233,68 @@ module.exports = cls => class IdealTreeBuilder extends cls {
             node.inert = true
           }
         }
+      }
+    }
+  }
+
+  // Load the root project's packageExtensions rule set.
+  // Only the workspace root is authoritative, matching the root-only model of overrides.
+  // The canonical hash is stashed on the lockfile meta so commit() can persist it.
+  #loadPackageExtensions () {
+    const rootPkg = this.idealTree.target.package
+    const lockedHash = this.idealTree.meta.packageExtensionsHash
+    this.#packageExtensions = new PackageExtensions(rootPkg.packageExtensions)
+    this.idealTree.meta.packageExtensionsHash = this.#packageExtensions.hash
+
+    // When the rule set has changed since the lockfile was written, the locked manifests for affected packages are stale.
+    // The locked manifest is the effective, already-extended manifest, so detach those nodes and rebuild them from fresh manifests under the current rules.
+    if (this.idealTree.meta.loadedFromDisk && lockedHash !== this.#packageExtensions.hash) {
+      for (const node of [...this.idealTree.inventory.values()]) {
+        if (node.isProjectRoot || node.isWorkspace || node.isTop) {
+          continue
+        }
+        // a node is affected if it carries provenance from the old rules or matches a current selector
+        const affected = node.packageExtensionsApplied ||
+          this.#packageExtensions.wouldMatch(node.packageName, node.version)
+        if (affected) {
+          for (const edge of node.edgesIn) {
+            this.#depsQueue.push(edge.from)
+          }
+          node.parent = null
+        }
+      }
+    }
+  }
+
+  // Apply a matching root packageExtension to a copy of a candidate manifest.
+  // Returns the possibly-extended manifest and the provenance to attach to the node.
+  // Workspace candidates are never extended; that warning is emitted separately.
+  #applyPackageExtension (pkg) {
+    if (!this.#packageExtensions?.present) {
+      return { pkg, applied: null }
+    }
+    const res = this.#packageExtensions.apply(pkg)
+    return res ? { pkg: res.pkg, applied: res.applied } : { pkg, applied: null }
+  }
+
+  // Warn when packageExtensions appears in a non-root workspace, or when a root selector matches a workspace member.
+  // Workspace package manifests are edited directly and are never extension targets.
+  #warnWorkspacePackageExtensions () {
+    if (!this.#packageExtensions?.present) {
+      return
+    }
+    for (const node of this.idealTree.inventory.values()) {
+      // a workspace is in the inventory as both a Link and its target node; warn once by skipping the link
+      if (!node.isWorkspace || node.isLink) {
+        continue
+      }
+      if (node.package.packageExtensions !== undefined) {
+        log.warn('packageExtensions',
+          `"packageExtensions" in workspace ${node.name} is ignored; it is only honored at the workspace root`)
+      }
+      if (this.#packageExtensions.wouldMatch(node.name, node.version)) {
+        log.warn('packageExtensions',
+          `selector matches workspace package ${node.name}@${node.version}; edit its package.json directly instead of using packageExtensions`)
       }
     }
   }
@@ -579,6 +651,17 @@ module.exports = cls => class IdealTreeBuilder extends cls {
   // and leaving the user subject to getting it overwritten later anyway.
   async #queueVulnDependents (options) {
     for (const vuln of this.auditReport.values()) {
+      // A fix is available in-range but a release-age window blocks the patched
+      // version, so audit fix leaves this package at a vulnerable version.
+      if (vuln.fixBlockedByReleaseAge) {
+        const { version, before } = vuln.fixBlockedByReleaseAge
+        const cutoff = new Date(before).toISOString().slice(0, 10)
+        log.warn('audit', `A fix for ${vuln.name} is available (${vuln.name}@${version}) ` +
+          `but was published after the configured release-age cutoff (${cutoff}), so ` +
+          `${vuln.name} was left at a vulnerable version.\n` +
+          `To install it, add "${vuln.name}" to min-release-age-exclude, or relax ` +
+          'min-release-age or before.')
+      }
       for (const node of vuln.nodes) {
         const bundler = node.getBundler()
 
@@ -1385,7 +1468,13 @@ This is a one-time fix-up, please be patient...
             )
             return this.#failureNode(name, parent, error, edge)
           }
-          return new Node({ name, pkg, parent, installLinks, legacyPeerDeps })
+          // Apply a matching root packageExtension to a manifest copy before the Node reads its dependency and peer edges.
+          const { pkg: extended, applied } = this.#applyPackageExtension(pkg)
+          const node = new Node({ name, pkg: extended, parent, installLinks, legacyPeerDeps })
+          if (applied) {
+            node.packageExtensionsApplied = applied
+          }
+          return node
         },
         error => this.#failureNode(name, parent, error, edge)
       )

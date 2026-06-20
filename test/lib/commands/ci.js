@@ -122,6 +122,23 @@ t.test('reifies, audits, removes node_modules on repeat run', async t => {
   t.equal(fs.existsSync(nmAbbrev), true, 'installs abbrev')
 })
 
+t.test('fails when packageExtensions are out of sync with the lock file', async t => {
+  const { npm } = await loadMockNpm(t, {
+    config: { audit: false },
+    prefixDir: {
+      abbrev,
+      // packageExtensions present in package.json but the lock file records no hash
+      'package.json': JSON.stringify({ ...packageJson, packageExtensions: {} }),
+      'package-lock.json': JSON.stringify(packageLock),
+    },
+  })
+  await t.rejects(
+    npm.exec('ci', []),
+    /packageExtensions state from lock file/,
+    'ci refuses to install with stale packageExtensions state'
+  )
+})
+
 t.test('--no-audit and --ignore-scripts', async t => {
   const { npm, joinedOutput, registry } = await loadMockNpm(t, {
     config: {
@@ -341,6 +358,17 @@ t.test('should throw ECIGLOBAL', async t => {
     config: { global: true },
   })
   await t.rejects(npm.exec('ci', []), { code: 'ECIGLOBAL' })
+})
+
+t.test('rejects the patch relax flags', async t => {
+  for (const flag of ['allow-unused-patches', 'ignore-patch-failures']) {
+    t.test(flag, async t => {
+      const { npm } = await loadMockNpm(t, {
+        config: { [flag]: true },
+      })
+      await t.rejects(npm.exec('ci', []), { code: 'ECIPATCHFLAG' })
+    })
+  }
 })
 
 t.test('should throw error when ideal inventory mismatches virtual', async t => {

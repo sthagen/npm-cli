@@ -1,4 +1,4 @@
-const { join, resolve, basename } = require('node:path')
+const { join, resolve, basename, delimiter } = require('node:path')
 const t = require('tap')
 const runScript = require('@npmcli/run-script')
 const localeCompare = require('@isaacs/string-locale-compare')('en')
@@ -74,12 +74,14 @@ const warningTracker = () => {
   }
 }
 
-const outputTracker = () => {
+// run-script@11 emits its banners via log.notice('run', ...) rather than
+// output.standard, so capture log events to assert on them.
+const logTracker = () => {
   const list = []
-  const onlog = (...msg) => msg[0] === 'standard' && list.push(msg)
-  process.on('output', onlog)
+  const onlog = (...msg) => list.push(msg)
+  process.on('log', onlog)
   return () => {
-    process.removeListener('output', onlog)
+    process.removeListener('log', onlog)
     return list
   }
 }
@@ -2858,12 +2860,20 @@ t.test('runs dependencies script if tree changes', async (t) => {
     t.not(fs.existsSync(expectedPath), `did not run ${script}`)
   }
 
-  const outputs = outputTracker()
+  const logs = logTracker()
 
   // reify again, this time adding a new dependency
   await reify(path, { foregroundScripts: true, add: ['once@^1.4.0'] })
 
-  t.match(outputs(), [/predependencies/, /dependencies/, /postdependencies/], 'logged banners')
+  const banners = logs()
+    .filter(([level, title]) => level === 'notice' && title === 'run')
+    .map(([, , msg]) => msg)
+    .filter(msg => msg.startsWith('root@1.0.0 '))
+  t.match(
+    banners,
+    [/predependencies/, /dependencies/, /postdependencies/],
+    'logged banners'
+  )
 
   // files should exist again
   for (const script of ['predependencies', 'dependencies', 'postdependencies']) {
@@ -3904,6 +3914,106 @@ t.test('should preserve exact ranges, missing actual tree', async (t) => {
     await t.resolves(arb.reify(), 'same-origin tarball is allowed for registry root')
   })
 
+  t.test('allowRemote=none allows registry tarball whose resolved origin differs from the configured registry', async t => {
+    // Proxy/mirror case: a committed lockfile pins resolved to the public registry while a private mirror is configured.
+    // replace-registry-host rewrites the host to the configured registry at fetch time, so the effective URL is registry-mediated and must pass allow-remote=none.
+    const abbrevPackumentNpmjs = JSON.stringify({
+      _id: 'abbrev',
+      _rev: 'lkjadflkjasdf',
+      name: 'abbrev',
+      'dist-tags': { latest: '1.1.1' },
+      versions: {
+        '1.1.1': {
+          name: 'abbrev',
+          version: '1.1.1',
+          dist: {
+            tarball: 'https://registry.npmjs.org/abbrev/-/abbrev-1.1.1.tgz',
+          },
+        },
+      },
+    })
+
+    const testdir = t.testdir({
+      project: {
+        'package.json': JSON.stringify({
+          name: 'myproject',
+          version: '1.0.0',
+          dependencies: {
+            abbrev: '1.1.1',
+          },
+        }),
+      },
+    })
+
+    tnock(t, 'https://registry.example.com')
+      .get('/abbrev')
+      .reply(200, abbrevPackumentNpmjs)
+
+    // replace-registry-host (default 'npmjs') rewrites the npmjs.org tarball host to the configured mirror, so the fetch lands here.
+    tnock(t, 'https://registry.example.com')
+      .get('/abbrev/-/abbrev-1.1.1.tgz')
+      .reply(200, abbrevTGZ)
+
+    const arb = new Arborist({
+      path: resolve(testdir, 'project'),
+      registry: 'https://registry.example.com',
+      cache: resolve(testdir, 'cache'),
+      allowRemote: 'none',
+    })
+
+    await t.resolves(arb.reify(), 'mirror-fronted registry tarball is allowed under allow-remote=none')
+  })
+
+  t.test('allowRemote=none allows registry tarball with replaceRegistryHost=always', async t => {
+    // replace-registry-host=always routes every registry tarball fetch through the configured registry, so the effective URL is never remote and must pass allow-remote=none.
+    const abbrevPackumentNpmjs = JSON.stringify({
+      _id: 'abbrev',
+      _rev: 'lkjadflkjasdf',
+      name: 'abbrev',
+      'dist-tags': { latest: '1.1.1' },
+      versions: {
+        '1.1.1': {
+          name: 'abbrev',
+          version: '1.1.1',
+          dist: {
+            tarball: 'https://registry.npmjs.org/abbrev/-/abbrev-1.1.1.tgz',
+          },
+        },
+      },
+    })
+
+    const testdir = t.testdir({
+      project: {
+        'package.json': JSON.stringify({
+          name: 'myproject',
+          version: '1.0.0',
+          dependencies: {
+            abbrev: '1.1.1',
+          },
+        }),
+      },
+    })
+
+    tnock(t, 'https://registry.example.com')
+      .get('/npm/abbrev')
+      .reply(200, abbrevPackumentNpmjs)
+
+    // always rewrites the tarball host to the configured registry and prepends the registry path.
+    tnock(t, 'https://registry.example.com')
+      .get('/npm/abbrev/-/abbrev-1.1.1.tgz')
+      .reply(200, abbrevTGZ)
+
+    const arb = new Arborist({
+      path: resolve(testdir, 'project'),
+      registry: 'https://registry.example.com/npm',
+      cache: resolve(testdir, 'cache'),
+      allowRemote: 'none',
+      replaceRegistryHost: 'always',
+    })
+
+    await t.resolves(arb.reify(), 'registry tarball routed through the configured registry is allowed')
+  })
+
   t.test('allowRemote=none allows registry tarball under linked install strategy', async t => {
     // The linked strategy extracts store nodes as IsolatedNode, which has no edges to recompute isRegistryDependency from.
     // The flag must be carried from the source tree node so the registry-tarball allow-remote exemption still applies.
@@ -4127,6 +4237,76 @@ t.test('install strategy linked', async (t) => {
       'packages/b should remain absent after reinstall'
     )
   })
+})
+
+t.test('linked strategy exposes store node_modules via NODE_PATH for lifecycle scripts', async t => {
+  // Regression for #9549. In the linked strategy a store package's deps are symlinked siblings in its store node_modules.
+  // A separate bin invoked by the script (e.g. napi-postinstall) resolves modules from its own store realpath and cannot see them, so npm exposes them via NODE_PATH.
+  const Arborist = require('../../lib/index.js')
+  const pacote = require('pacote')
+
+  const testdir = t.testdir({
+    src: {
+      'package.json': JSON.stringify({
+        name: 'has-postinstall',
+        version: '1.0.0',
+        scripts: { postinstall: 'node -e ""' },
+      }),
+    },
+    project: {
+      'package.json': JSON.stringify({
+        name: 'myproject',
+        version: '1.0.0',
+        dependencies: { 'has-postinstall': '1.0.0' },
+      }),
+    },
+  })
+
+  const tgz = await pacote.tarball(resolve(testdir, 'src'), { Arborist })
+
+  const packument = JSON.stringify({
+    _id: 'has-postinstall',
+    name: 'has-postinstall',
+    'dist-tags': { latest: '1.0.0' },
+    versions: {
+      '1.0.0': {
+        name: 'has-postinstall',
+        version: '1.0.0',
+        hasInstallScript: true,
+        scripts: { postinstall: 'node -e ""' },
+        dist: {
+          tarball: 'https://registry.npmjs.org/has-postinstall/-/has-postinstall-1.0.0.tgz',
+        },
+      },
+    },
+  })
+
+  tnock(t, 'https://registry.npmjs.org')
+    .get('/has-postinstall')
+    .reply(200, packument)
+
+  tnock(t, 'https://registry.npmjs.org')
+    .get('/has-postinstall/-/has-postinstall-1.0.0.tgz')
+    .reply(200, tgz)
+
+  const path = resolve(testdir, 'project')
+  const arb = new Arborist({
+    path,
+    registry: 'https://registry.npmjs.org',
+    cache: resolve(testdir, 'cache'),
+    installStrategy: 'linked',
+    dangerouslyAllowAllScripts: true,
+  })
+  await arb.reify()
+
+  const run = [...arb.scriptsRun]
+    .find(s => s.pkg.name === 'has-postinstall' && s.event === 'postinstall')
+  t.ok(run, 'postinstall ran for the store package')
+  t.match(run.path, /[\\/]\.store[\\/]/, 'script ran on the store entry')
+  // Assert the leading entry: the fix prepends the store node_modules to any pre-existing NODE_PATH (e.g. the coverage harness on Windows CI).
+  const [firstNodePath] = run.env.NODE_PATH.split(delimiter)
+  t.equal(firstNodePath, resolve(run.path, '..'),
+    'NODE_PATH leads with the store node_modules holding the package deps')
 })
 
 t.test('workspace installs retain existing versions with newer package specs', async t => {

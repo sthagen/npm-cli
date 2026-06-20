@@ -10,6 +10,12 @@
 
 const localeCompare = require('@isaacs/string-locale-compare')('en')
 const defaultLockfileVersion = 3
+// Bumped to 4 only when a node carries a patch record, so older clients abort.
+const patchedLockfileVersion = 4
+// packageExtensions provenance also forces lockfileVersion 4 so older clients abort rather than silently dropping the repaired graph.
+// Both features share version 4: they are root-owned graph repairs an old npm must not drop.
+const packageExtensionsLockfileVersion = 4
+const maxLockfileVersion = 4
 
 // for comparing nodes to yarn.lock entries
 const mismatch = (a, b) => a && b && a !== b
@@ -107,6 +113,8 @@ const nodeMetaKeys = [
   'integrity',
   'inBundle',
   'hasInstallScript',
+  'patched',
+  'packageExtensionsApplied',
 ]
 
 const metaFieldFromPkg = (pkg, key) => {
@@ -347,6 +355,7 @@ class Shrinkwrap {
   reset () {
     this.tree = null
     this.#awaitingUpdate = new Map()
+    this.packageExtensionsHash = null
     const lockfileVersion = this.lockfileVersion || defaultLockfileVersion
     this.originalLockfileVersion = lockfileVersion
 
@@ -458,6 +467,13 @@ class Shrinkwrap {
       this.ancientLockfile = false
       data = {}
     }
+    // refuse lockfiles newer than we understand so we never drop a patched or repaired graph we cannot read
+    if (data.lockfileVersion > maxLockfileVersion) {
+      throw Object.assign(
+        new Error(`Unsupported lockfileVersion ${data.lockfileVersion}. This npm only supports up to ${maxLockfileVersion}. Please upgrade npm.`),
+        { code: 'ELOCKFILEVERSION' }
+      )
+    }
     // auto convert v1 lockfiles to v3
     // leave v2 in place unless configured
     // v3 by default
@@ -477,6 +493,9 @@ class Shrinkwrap {
     }
 
     this.originalLockfileVersion = data.lockfileVersion
+
+    // the canonical packageExtensions hash, if the lockfile recorded one on its root entry
+    this.packageExtensionsHash = data.packages?.['']?.packageExtensionsHash || null
 
     // use default if it wasn't explicitly set, and the current file is
     // less than our default.  otherwise, keep whatever is in the file,
@@ -895,6 +914,10 @@ class Shrinkwrap {
         this.tree.target,
         this.path,
         this.resolveOptions)
+      // record the canonical packageExtensions hash on the root entry so npm ci can detect stale extension state
+      if (this.packageExtensionsHash) {
+        root.packageExtensionsHash = this.packageExtensionsHash
+      }
       this.data.packages = {}
       if (Object.keys(root).length) {
         this.data.packages[''] = root
@@ -939,6 +962,22 @@ class Shrinkwrap {
     // if we haven't set it by now, use the default
     if (!this.lockfileVersion) {
       this.lockfileVersion = defaultLockfileVersion
+    }
+    // patched nodes force lockfileVersion 4 so older clients abort the install
+    // the hidden lockfile is an internal cache pinned to version 3, so it never drives this upgrade
+    const hasPatched = !this.hiddenLockfile &&
+      Object.values(this.data.packages).some(p => p.patched)
+    if (hasPatched && this.lockfileVersion < patchedLockfileVersion) {
+      log.warn('shrinkwrap', `patchedDependencies requires lockfileVersion ${patchedLockfileVersion}; upgrading the lockfile from version ${this.lockfileVersion}.`)
+      this.lockfileVersion = patchedLockfileVersion
+    }
+    // packageExtensions state likewise forces lockfileVersion 4 so older clients abort instead of dropping the repaired graph
+    const hasExtensionState = !this.hiddenLockfile &&
+      (this.packageExtensionsHash ||
+        Object.values(this.data.packages).some(p => p.packageExtensionsApplied))
+    if (hasExtensionState && this.lockfileVersion < packageExtensionsLockfileVersion) {
+      log.warn('shrinkwrap', `packageExtensions requires lockfileVersion ${packageExtensionsLockfileVersion}; upgrading the lockfile from version ${this.lockfileVersion}.`)
+      this.lockfileVersion = packageExtensionsLockfileVersion
     }
     this.data.lockfileVersion = this.lockfileVersion
 

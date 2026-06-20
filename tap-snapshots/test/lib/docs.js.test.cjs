@@ -133,6 +133,7 @@ Array [
   "outdated",
   "owner",
   "pack",
+  "patch",
   "ping",
   "pkg",
   "prefix",
@@ -357,6 +358,19 @@ setting.
 
 
 
+#### \`allow-unused-patches\`
+
+* Default: false
+* Type: Boolean
+
+Install even when a registered patch in \`patchedDependencies\` matches no
+installed package. Does not silence patch apply failures.
+
+This flag is only honored when passed on the command line; it is ignored in
+\`.npmrc\` and environment variables, and rejected by \`npm ci\`.
+
+
+
 #### \`audit\`
 
 * Default: true
@@ -409,6 +423,10 @@ wins (an explicit absolute date overrides a relative window). Across
 sources, the standard precedence applies (cli > env > project > user >
 global), so a higher-priority source can always relax or override a
 lower-priority one.
+
+As with \`min-release-age\`, when this cutoff blocks a fix that \`npm audit
+fix\` would install, npm keeps the vulnerable version, warns, and exits with
+a non-zero code.
 
 Packages whose names match \`min-release-age-exclude\` are exempt from this
 filter.
@@ -675,6 +693,16 @@ commands that modify your local installation, eg, \`install\`, \`update\`,
 
 Note: This is NOT honored by other network related commands, eg \`dist-tags\`,
 \`owner\`, etc.
+
+
+
+#### \`edit-dir\`
+
+* Default: null
+* Type: null or Path
+
+Override the temporary directory used by \`npm patch add\` to prepare a
+package for editing.
 
 
 
@@ -945,6 +973,29 @@ CI setup.
 
 This value is not exported to the environment for child processes.
 
+#### \`ignore-existing\`
+
+* Default: false
+* Type: Boolean
+
+With \`npm patch add\`, discard a previous unfinished edit directory and start
+fresh.
+
+
+
+#### \`ignore-patch-failures\`
+
+* Default: false
+* Type: Boolean
+
+Install even when a registered patch fails to apply, with a warning per
+failure. Intended for incident response only.
+
+This flag is only honored when passed on the command line; it is ignored in
+\`.npmrc\` and environment variables, and rejected by \`npm ci\`.
+
+
+
 #### \`ignore-scripts\`
 
 * Default: false
@@ -1040,10 +1091,11 @@ homepage.
 
 #### \`init-license\`
 
-* Default: "ISC"
+* Default: ""
 * Type: String
 
-The value \`npm init\` should use by default for the package license.
+The value \`npm init\` should use by default for the package license. If not
+set, the license field will be omitted from new packages.
 
 
 
@@ -1124,6 +1176,16 @@ Whether or not to output JSON data, rather than the normal output.
   saving them to your \`package.json\`.
 
 Not supported by all npm commands.
+
+
+
+#### \`keep-edit-dir\`
+
+* Default: false
+* Type: Boolean
+
+With \`npm patch commit\`, do not remove the edit directory after committing
+the patch.
 
 
 
@@ -1302,6 +1364,12 @@ your \`.npmrc\` is preserved when npm internally spawns a sub-process with
 \`--before\` while preparing a \`git:\` or \`github:\` dependency); when both
 apply, \`before\` wins within a single source and across sources the standard
 precedence rules apply.
+
+When this window stops \`npm audit fix\` from installing a patched version
+(because the fix was published too recently), npm keeps the package at its
+vulnerable version, warns that the fix was blocked, and exits with a
+non-zero code. To install the fix, add the package to
+\`min-release-age-exclude\`, or relax \`min-release-age\` or \`before\`.
 
 Packages whose names match \`min-release-age-exclude\` are exempt from this
 filter.
@@ -1558,6 +1626,16 @@ Output parseable results from commands that write to standard output. For
 
 Password for authentication. Can be provided via command line when creating
 tokens, though it's generally safer to be prompted for it.
+
+
+
+#### \`patches-dir\`
+
+* Default: "patches"
+* Type: String
+
+The directory, relative to the project root, where \`npm patch commit\` writes
+patch files for \`patchedDependencies\`.
 
 
 
@@ -2041,6 +2119,17 @@ while still writing the timing file, use \`--silent\`.
 
 
 
+#### \`to\`
+
+* Default: null
+* Type: null or String
+
+Used by \`npm patch update\` to set the version to rebase a patch onto when it
+cannot be read from \`package-lock.json\` — for example an exact-version
+selector, or a version that has not been installed yet.
+
+
+
 #### \`token-description\`
 
 * Default: null
@@ -2346,7 +2435,7 @@ Alias for \`--init-author-url\`
 
 #### \`init.license\`
 
-* Default: "ISC"
+* Default: ""
 * Type: String
 * DEPRECATED: Use \`--init-license\` instead.
 
@@ -2564,6 +2653,12 @@ Array [
   "package-lock-only",
   "pack-destination",
   "packages",
+  "patches-dir",
+  "allow-unused-patches",
+  "ignore-patch-failures",
+  "edit-dir",
+  "ignore-existing",
+  "keep-edit-dir",
   "parseable",
   "allow-scripts-pending",
   "allow-scripts-pin",
@@ -2612,6 +2707,7 @@ Array [
   "tag",
   "tag-version-prefix",
   "timing",
+  "to",
   "umask",
   "unicode",
   "update-notifier",
@@ -2730,6 +2826,7 @@ Array [
   "package-lock-only",
   "pack-destination",
   "packages",
+  "patches-dir",
   "parseable",
   "allow-scripts-pending",
   "allow-scripts-pin",
@@ -2807,8 +2904,14 @@ Array [
   "logs-max",
   "long",
   "node-options",
+  "allow-unused-patches",
+  "ignore-patch-failures",
+  "edit-dir",
+  "ignore-existing",
+  "keep-edit-dir",
   "prefix",
   "timing",
+  "to",
   "update-notifier",
   "usage",
   "userconfig",
@@ -2918,6 +3021,7 @@ Object {
   "packDestination": ".",
   "parseable": false,
   "password": null,
+  "patchesDir": "patches",
   "preferDedupe": false,
   "preferOffline": false,
   "preferOnline": false,
@@ -5301,6 +5405,70 @@ npm pack <package-spec>
 #### \`workspaces\`
 #### \`include-workspace-root\`
 #### \`ignore-scripts\`
+`
+
+exports[`test/lib/docs.js TAP usage patch > must match snapshot 1`] = `
+Apply local patches to installed dependencies
+
+Usage:
+npm patch <pkg>[@<version>]
+npm patch add <pkg>[@<version>] [--edit-dir <path>] [--ignore-existing]
+npm patch commit <edit-dir> [--patches-dir <dir>] [--keep-edit-dir]
+npm patch update <pkg>[@<old-version>] [--to <new-version>] [--patches-dir <dir>]
+npm patch ls
+npm patch rm <pkg>[@<version>]
+
+Options:
+[--patches-dir <patches-dir>] [--allow-unused-patches] [--ignore-patch-failures]
+[--edit-dir <edit-dir>] [--ignore-existing] [--keep-edit-dir] [--to <version>]
+[--registry <registry>]
+
+  --patches-dir
+    The directory, relative to the project root, where \`npm patch commit\`
+
+  --allow-unused-patches
+    Install even when a registered patch in \`patchedDependencies\` matches no
+
+  --ignore-patch-failures
+    Install even when a registered patch fails to apply, with a warning per
+
+  --edit-dir
+    Override the temporary directory used by \`npm patch add\` to prepare a
+
+  --ignore-existing
+    With \`npm patch add\`, discard a previous unfinished edit directory and
+
+  --keep-edit-dir
+    With \`npm patch commit\`, do not remove the edit directory after
+
+  --to
+    Used by \`npm patch update\` to set the version to rebase a patch onto
+
+  --registry
+    The base URL of the npm registry.
+
+
+Run "npm help patch" for more info
+
+\`\`\`bash
+npm patch <pkg>[@<version>]
+npm patch add <pkg>[@<version>] [--edit-dir <path>] [--ignore-existing]
+npm patch commit <edit-dir> [--patches-dir <dir>] [--keep-edit-dir]
+npm patch update <pkg>[@<old-version>] [--to <new-version>] [--patches-dir <dir>]
+npm patch ls
+npm patch rm <pkg>[@<version>]
+\`\`\`
+
+Note: This command is unaware of workspaces.
+
+#### \`patches-dir\`
+#### \`allow-unused-patches\`
+#### \`ignore-patch-failures\`
+#### \`edit-dir\`
+#### \`ignore-existing\`
+#### \`keep-edit-dir\`
+#### \`to\`
+#### \`registry\`
 `
 
 exports[`test/lib/docs.js TAP usage ping > must match snapshot 1`] = `
