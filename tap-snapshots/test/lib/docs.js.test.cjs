@@ -759,6 +759,19 @@ expiration.
 
 
 
+#### \`extension-file\`
+
+* Default: null
+* Type: null or Path
+
+Path to a project-local npm extension file to load instead of discovering
+\`.npm-extension.mjs\` / \`.npm-extension.cjs\` at the project root. Must
+resolve inside the project root and use a \`.mjs\` or \`.cjs\` extension. Only
+honored from project config or the command line, never from user, global, or
+builtin config.
+
+
+
 #### \`fetch-retries\`
 
 * Default: 2
@@ -983,6 +996,18 @@ fresh.
 
 
 
+#### \`ignore-extension\`
+
+* Default: false
+* Type: Boolean
+
+If true, npm does not import or execute a root \`.npm-extension.mjs\` /
+\`.npm-extension.cjs\` file (or one selected via \`extension-file\`).
+\`ignore-scripts\` implies \`ignore-extension\`, since both disable root-owned
+install-time code.
+
+
+
 #### \`ignore-patch-failures\`
 
 * Default: false
@@ -1007,6 +1032,9 @@ Note that commands explicitly intended to run a particular script, such as
 \`npm start\`, \`npm stop\`, \`npm restart\`, \`npm test\`, and \`npm run\` will still
 run their intended script if \`ignore-scripts\` is set, but they will *not*
 run any pre- or post-scripts.
+
+Setting \`ignore-scripts\` also disables \`.npm-extension\` execution, as if
+\`ignore-extension\` were set.
 
 
 
@@ -2034,6 +2062,10 @@ with install scripts that are neither approved nor denied).
 \`--ignore-scripts\` and \`--dangerously-allow-all-scripts\` both override this
 setting.
 
+Optional dependencies that cannot be installed on the current platform or
+engine (a non-matching \`os\`, \`cpu\`, or \`libc\`) are not flagged, because
+their install scripts never run.
+
 
 
 #### \`strict-peer-deps\`
@@ -2580,6 +2612,7 @@ Array [
   "expect-result-count",
   "expect-results",
   "expires",
+  "extension-file",
   "fetch-retries",
   "fetch-retry-factor",
   "fetch-retry-maxtimeout",
@@ -2598,6 +2631,7 @@ Array [
   "heading",
   "https-proxy",
   "if-present",
+  "ignore-extension",
   "ignore-scripts",
   "include",
   "include-staged",
@@ -2771,6 +2805,7 @@ Array [
   "editor",
   "engine-strict",
   "expires",
+  "extension-file",
   "fetch-retries",
   "fetch-retry-factor",
   "fetch-retry-maxtimeout",
@@ -2789,6 +2824,7 @@ Array [
   "heading",
   "https-proxy",
   "if-present",
+  "ignore-extension",
   "ignore-scripts",
   "include",
   "include-staged",
@@ -2966,6 +3002,7 @@ Object {
   "editor": "{EDITOR}",
   "engineStrict": false,
   "expires": null,
+  "extensionFile": null,
   "force": false,
   "foregroundScripts": false,
   "formatPackageLock": true,
@@ -2978,6 +3015,7 @@ Object {
   "heading": "npm",
   "httpsProxy": null,
   "ifPresent": false,
+  "ignoreExtension": false,
   "ignoreScripts": false,
   "includeAttestations": false,
   "includeStaged": false,
