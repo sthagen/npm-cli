@@ -223,6 +223,21 @@ t.test('packageLockOnly with linked strategy in workspaces', async t => {
   t.throws(() => fs.statSync(path + '/node_modules'), { code: 'ENOENT' })
 })
 
+t.test('linked strategy audits the non-isolated tree', async t => {
+  // The isolated tree has no queryable inventory, so auditing it reports nothing. The install-time audit must run against the non-isolated tree, matching standalone npm audit. https://github.com/npm/cli/issues/9609
+  const src = resolve(fixtures, 'audit-one-vuln')
+  // Copy into a throwaway dir since packageLockOnly rewrites the lockfile.
+  const path = t.testdir({
+    'package.json': fs.readFileSync(join(src, 'package.json'), 'utf8'),
+    'package-lock.json': fs.readFileSync(join(src, 'package-lock.json'), 'utf8'),
+  })
+  const registry = createRegistry(t, true)
+  registry.audit({ convert: true, results: require(join(src, 'audit.json')) })
+  const arb = newArb({ path, audit: true, packageLockOnly: true, installStrategy: 'linked' })
+  await arb.reify()
+  t.ok(arb.auditReport.has('minimist'), 'vulnerable package reported under linked strategy')
+})
+
 t.test('malformed package.json should not be overwritten', async t => {
   t.plan(2)
 
@@ -4205,6 +4220,119 @@ t.test('install strategy linked', async (t) => {
     t.ok(abbrev.isSymbolicLink(), 'abbrev got installed')
   })
 
+  t.test('hidden lockfile records the linked .store layout and round-trips', async t => {
+    // Regression for #9612: the hidden lockfile must record the on-disk .store/symlink layout so it round-trips as a valid cache.
+    const Shrinkwrap = require('../../lib/shrinkwrap.js')
+    const path = t.testdir({
+      'package.json': JSON.stringify({
+        name: 'root',
+        version: '1.0.0',
+        // once depends on wrappy, so the store has a transitive symlink to validate
+        dependencies: { once: '1.4.0' },
+      }),
+    })
+
+    createRegistry(t, true)
+    await reify(path, { installStrategy: 'linked' })
+
+    const hidden = require(resolve(path, 'node_modules/.package-lock.json'))
+    const locs = Object.keys(hidden.packages)
+    // the layout is recorded at .store paths, not hoisted node_modules/<name>
+    t.ok(locs.some(l => /^node_modules\/\.store\/once@/.test(l)),
+      'once is recorded under .store')
+    t.ok(locs.some(l => /^node_modules\/\.store\/.*\/node_modules\/wrappy$/.test(l)),
+      'the transitive wrappy symlink is recorded inside the store')
+    t.notOk(locs.includes('node_modules/wrappy'),
+      'wrappy is not recorded at a hoisted path')
+
+    // the cache is accepted on reload: assertNoNewer matches it against the real disk layout
+    const meta = await Shrinkwrap.load({ path, hiddenLockfile: true })
+    t.equal(meta.loadedFromDisk, true, 'hidden lockfile is a valid cache of the disk layout')
+
+    // loadActual must reconstruct the tree from the cache with once->wrappy resolved through the store.
+    const actual = await newArb({ path, installStrategy: 'linked' }).loadActual()
+    const onceNode = [...actual.inventory.values()].find(n => n.name === 'once' && !n.isLink)
+    t.ok(onceNode, 'once is in the cached actual tree')
+    const wrappyEdge = onceNode.edgesOut.get('wrappy')
+    t.ok(wrappyEdge && !wrappyEdge.missing, 'once resolves its wrappy dep through the cached store layout')
+  })
+
+  t.test('hidden lockfile round-trips with an undeclared workspace', async t => {
+    // Regression for #9612: an undeclared workspace materializes deps in its own node_modules but isn't linked into root, and the cache must still validate that subtree.
+    const Shrinkwrap = require('../../lib/shrinkwrap.js')
+    const path = t.testdir({
+      'package.json': JSON.stringify({
+        name: 'host',
+        version: '1.0.0',
+        workspaces: ['packages/a'],
+        // root does not depend on the workspace, so it stays undeclared
+      }),
+      packages: {
+        a: {
+          'package.json': JSON.stringify({
+            name: 'a',
+            version: '1.0.0',
+            dependencies: { once: '1.4.0' },
+          }),
+        },
+      },
+    })
+
+    createRegistry(t, true)
+    await reify(path, { installStrategy: 'linked' })
+
+    // the workspace's dep is materialized under its own node_modules, not the root's
+    t.ok(fs.lstatSync(resolve(path, 'packages/a/node_modules/once')).isSymbolicLink(),
+      'once is symlinked into the workspace node_modules')
+    t.notOk(fs.existsSync(resolve(path, 'node_modules/a')),
+      'the undeclared workspace is not symlinked into the root node_modules')
+
+    const meta = await Shrinkwrap.load({ path, hiddenLockfile: true })
+    t.equal(meta.loadedFromDisk, true, 'hidden lockfile validates the undeclared workspace subtree')
+  })
+
+  t.test('hidden lockfile round-trips with an undeclared workspace and no store entries', async t => {
+    // Regression for #9612: with only local deps there is no .store, so the cache must still walk the undeclared workspace subtree to validate it.
+    const Shrinkwrap = require('../../lib/shrinkwrap.js')
+    const path = t.testdir({
+      'package.json': JSON.stringify({
+        name: 'host',
+        version: '1.0.0',
+        workspaces: ['packages/w', 'packages/a', 'packages/b'],
+        // only w is declared; a and b stay undeclared, and a depends on b locally
+        dependencies: { w: '1.0.0' },
+      }),
+      packages: {
+        w: { 'package.json': JSON.stringify({ name: 'w', version: '1.0.0' }) },
+        a: {
+          'package.json': JSON.stringify({
+            name: 'a',
+            version: '1.0.0',
+            dependencies: { b: '1.0.0' },
+          }),
+        },
+        b: { 'package.json': JSON.stringify({ name: 'b', version: '1.0.0' }) },
+      },
+    })
+
+    createRegistry(t, false)
+    await reify(path, { installStrategy: 'linked' })
+
+    t.notOk(fs.existsSync(resolve(path, 'node_modules/.store')),
+      'no store is created for an all-local graph')
+    t.ok(fs.lstatSync(resolve(path, 'packages/a/node_modules/b')).isSymbolicLink(),
+      'the undeclared workspace links its local dep')
+
+    const meta = await Shrinkwrap.load({ path, hiddenLockfile: true })
+    t.equal(meta.loadedFromDisk, true, 'hidden lockfile validates the subtree without any store entry')
+
+    // loadActual must reconstruct the undeclared workspace from the cache with its local dep resolved.
+    const actual = await newArb({ path, installStrategy: 'linked' }).loadActual()
+    const aNode = [...actual.inventory.values()].find(n => n.name === 'a' && !n.isLink)
+    const bEdge = aNode && aNode.edgesOut.get('b')
+    t.ok(bEdge && !bEdge.missing, 'the undeclared workspace resolves its local dep through the cache')
+  })
+
   t.test('does not re-create a workspace dir removed from manifest', async t => {
     // Regression test for https://github.com/npm/cli/issues/9331
     const path = t.testdir({
@@ -4236,6 +4364,40 @@ t.test('install strategy linked', async (t) => {
       fs.existsSync(resolve(path, 'packages/b')),
       'packages/b should remain absent after reinstall'
     )
+  })
+
+  t.test('removes stale .bin shims after uninstall, keeps surviving ones', async t => {
+    // Regression test for https://github.com/npm/cli/issues/9613
+    const path = t.testdir({
+      'package.json': JSON.stringify({ name: 'un', version: '1.0.0' }),
+    })
+    createRegistry(t, true)
+    const binDir = resolve(path, 'node_modules/.bin')
+    const rbin = resolve(binDir, 'rimraf')
+    const sbin = resolve(binDir, 'semver')
+
+    await reify(path, { add: ['rimraf@2.7.1', 'semver@7.3.2'], installStrategy: 'linked' })
+    // lstatSync throws if missing; don't assert symlink since Windows shims are regular files.
+    t.ok(fs.lstatSync(rbin), 'rimraf shim created')
+    t.ok(fs.lstatSync(sbin), 'semver shim created')
+
+    // Plant Windows shim files alongside the POSIX symlinks to cover both layouts: stale (rimraf) and surviving (semver).
+    const rcmd = resolve(binDir, 'rimraf.cmd')
+    const rps1 = resolve(binDir, 'rimraf.ps1')
+    const scmd = resolve(binDir, 'semver.cmd')
+    const sps1 = resolve(binDir, 'semver.ps1')
+    fs.writeFileSync(rcmd, '@echo off\r\n"%~dp0\\..\\rimraf\\bin.js" %*\r\n')
+    fs.writeFileSync(rps1, '& "$basedir/../rimraf/bin.js" $args\r\n')
+    fs.writeFileSync(scmd, '@echo off\r\n"%~dp0\\..\\semver\\bin\\semver.js" %*\r\n')
+    fs.writeFileSync(sps1, '& "$basedir/../semver/bin/semver.js" $args\r\n')
+
+    await reify(path, { rm: ['rimraf'], installStrategy: 'linked' })
+    t.throws(() => fs.lstatSync(rbin), 'stale rimraf symlink removed')
+    t.throws(() => fs.lstatSync(rcmd), 'stale rimraf.cmd removed')
+    t.throws(() => fs.lstatSync(rps1), 'stale rimraf.ps1 removed')
+    t.ok(fs.lstatSync(sbin), 'surviving semver shim kept')
+    t.ok(fs.lstatSync(scmd), 'surviving semver.cmd kept')
+    t.ok(fs.lstatSync(sps1), 'surviving semver.ps1 kept')
   })
 })
 

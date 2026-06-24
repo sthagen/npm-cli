@@ -28,7 +28,8 @@ const { applyPatchToDir, patchIntegrity } = require('../patch.js')
 const { readFile } = require('node:fs/promises')
 const retirePath = require('../retire-path.js')
 const treeCheck = require('../tree-check.js')
-const { defaultLockfileVersion } = require('../shrinkwrap.js')
+const Shrinkwrap = require('../shrinkwrap.js')
+const { defaultLockfileVersion } = Shrinkwrap
 const { saveTypeMap, hasSubKey } = require('../add-rm-pkg-deps.js')
 const { IsolatedNode, IsolatedLink } = require('../isolated-classes.js')
 
@@ -77,6 +78,9 @@ module.exports = cls => class Reifier extends cls {
   #sparseTreeDirs = new Set()
   #sparseTreeRoots = new Set()
   #linkedActualForDiff = null
+  // Under the linked strategy the audit runs against this non-isolated ideal tree.
+  // The isolated tree's inventory has no queryable indexes and its edges route through symlinks, so auditing it reports no vulnerabilities.
+  #linkedIdealForAudit = null
 
   constructor (options) {
     super(options)
@@ -112,32 +116,43 @@ module.exports = cls => class Reifier extends cls {
     await this[_loadTrees](options)
 
     const oldTree = this.idealTree
+    // Kept to serialize the hidden lockfile from the on-disk .store/symlink layout.
+    let isolatedTree = null
     if (linked) {
       // swap out the tree with the isolated tree
       // this is currently technical debt which will be resolved in a refactor
       // of Node/Link trees
       log.warn('reify', 'The "linked" install strategy is EXPERIMENTAL and may contain bugs.')
       this.idealTree = await this.createIsolatedTree()
+      isolatedTree = this.idealTree
       if (this.actualTree) {
         this.#linkedActualForDiff = this.#buildLinkedActualForDiff(
           this.idealTree, this.actualTree
         )
       }
+      // Keep the non-isolated tree so the quick audit can run against it.
+      this.#linkedIdealForAudit = oldTree
     }
-    await this[_diffTrees]()
-    await this.#reifyPackages()
-    if (linked) {
-      // The sweep mutates node_modules on disk, so skip it for dry runs and lockfile-only installs (those modes also short-circuit #reifyPackages).
-      // The sweep itself scopes to in-filter workspaces when a filter is active, so it's safe to run for filtered installs too.
-      if (!this.options.dryRun && !this.options.packageLockOnly) {
-        await this.#cleanOrphanedStoreEntries()
+    try {
+      await this[_diffTrees]()
+      await this.#reifyPackages()
+      if (linked) {
+        // The sweep mutates node_modules on disk, so skip it for dry runs and lockfile-only installs (those modes also short-circuit #reifyPackages).
+        // The sweep itself scopes to in-filter workspaces when a filter is active, so it's safe to run for filtered installs too.
+        if (!this.options.dryRun && !this.options.packageLockOnly) {
+          await this.#cleanOrphanedStoreEntries()
+        }
       }
-      // swap back in the idealTree
-      // so that the lockfile is preserved
-      this.idealTree = oldTree
+    } finally {
+      // Restore the non-isolated tree so the lockfile is preserved and a reused Arborist never sees the isolated tree, even if reify throws.
+      if (linked) {
+        this.idealTree = oldTree
+      }
+      // The quick audit has captured its tree synchronously by now, so drop the stashed references even on throw.
+      this.#linkedIdealForAudit = null
+      this.#linkedActualForDiff = null
     }
     await this[_saveIdealTree](options)
-    this.#linkedActualForDiff = null
     // clean inert
     for (const node of this.idealTree.inventory.values()) {
       if (node.inert) {
@@ -230,17 +245,24 @@ module.exports = cls => class Reifier extends cls {
       calcDepFlags(this.idealTree)
     }
 
-    // save the ideal's meta as a hidden lockfile after we actualize it
-    this.idealTree.meta.filename =
-      this.idealTree.realpath + '/node_modules/.package-lock.json'
-    this.idealTree.meta.hiddenLockfile = true
-    this.idealTree.meta.lockfileVersion = defaultLockfileVersion
+    // save the ideal's meta as a hidden lockfile after we actualize it.
+    // Under linked the logical tree is the hoisted layout, so the hidden lockfile is serialized from the isolated tree instead.
+    if (!linked) {
+      this.idealTree.meta.filename =
+        this.idealTree.realpath + '/node_modules/.package-lock.json'
+      this.idealTree.meta.hiddenLockfile = true
+      this.idealTree.meta.lockfileVersion = defaultLockfileVersion
+    }
 
     this.actualTree = this.idealTree
     this.idealTree = null
 
     if (!this.options.global && !this.options.dryRun) {
-      await this.actualTree.meta.save()
+      if (linked) {
+        await this.#saveLinkedHiddenLockfile(isolatedTree)
+      } else {
+        await this.actualTree.meta.save()
+      }
       const ignoreScripts = !!this.options.ignoreScripts
       // if we aren't doing a dry run or ignoring scripts and we actually made changes to the dep
       // tree, then run the dependencies scripts
@@ -840,6 +862,47 @@ module.exports = cls => class Reifier extends cls {
     return join(filePath)
   }
 
+  // Serialize the hidden lockfile from the isolated tree, which mirrors the on-disk .store/symlink layout.
+  // Its children are every materialized node_modules entry: store package dirs and all symlinks.
+  async #saveLinkedHiddenLockfile (isolatedTree) {
+    const path = isolatedTree.realpath
+    const meta = new Shrinkwrap({
+      path,
+      hiddenLockfile: true,
+      lockfileVersion: defaultLockfileVersion,
+      resolveOptions: this.options,
+    })
+    meta.reset()
+    meta.filename = resolve(path, 'node_modules/.package-lock.json')
+    const storeRe = /^(.*\/\.store\/.+?)\/node_modules\//
+    const containers = new Set()
+    const nodes = new Set()
+    for (const node of isolatedTree.children.values()) {
+      // Tree-only undeclared workspace self-links aren't on disk.
+      if (node.isUndeclaredWorkspaceLink) {
+        continue
+      }
+      nodes.add(node)
+      // Record the enclosing .store/<key> dir so loadVirtual can resolve a store package's sibling deps.
+      // node.location uses the platform separator; lockfile keys are posix.
+      const m = node.location.replace(/\\/g, '/').match(storeRe)
+      if (m) {
+        containers.add(m[1])
+      }
+    }
+    // Workspace dirs hold their own dep symlinks; record them so the cache can validate those subtrees.
+    for (const ws of isolatedTree.fsChildren) {
+      nodes.add(ws)
+    }
+    for (const node of nodes) {
+      meta.add(node)
+    }
+    for (const loc of containers) {
+      meta.data.packages[loc] = {}
+    }
+    await meta.save()
+  }
+
   // Build a flat actual tree wrapper for linked installs so the diff can correctly match store entries that already exist on disk.
   // The proxy tree from createIsolatedTree() is flat (all children on root), but loadActual() produces a nested tree where store entries are deep link targets.
   // This wrapper surfaces them at the root level for comparison.
@@ -1169,7 +1232,8 @@ module.exports = cls => class Reifier extends cls {
     // with the reification, and be resolved at a later time.
     const timeEnd = time.start('reify:audit')
     const options = { ...this.options }
-    const tree = this.idealTree
+    // Under the linked strategy idealTree is the isolated tree, which the audit cannot traverse; audit the non-isolated tree instead.
+    const tree = this.#linkedIdealForAudit || this.idealTree
 
     // if we're operating on a workspace, only audit the workspace deps
     if (this.options.workspaces.length) {
@@ -1411,6 +1475,8 @@ module.exports = cls => class Reifier extends cls {
     // Locations are normalized to forward slashes here because IsolatedNode/IsolatedLink locations are built with path.join, which uses backslashes on Windows.
     const validKeys = new Set()
     const nmDirs = new Map()
+    // Valid bin shim names per node_modules dir, collected from each top-level link's package.bin so the .bin sweep keeps only shims a still-linked package provides.
+    const binsByDir = new Map()
     const NM_PREFIX = 'node_modules/'
     const STORE_MARKER = '/.store/'
     for (const child of this.idealTree.children.values()) {
@@ -1450,6 +1516,19 @@ module.exports = cls => class Reifier extends cls {
         nmDirs.set(dir, set)
       }
       set.add(entry)
+
+      // package.bin is normalized to an object keyed by bin name; shim names are unscoped even for scoped packages.
+      const bin = child.package?.bin
+      if (bin && typeof bin === 'object') {
+        let binSet = binsByDir.get(dir)
+        if (!binSet) {
+          binSet = new Set()
+          binsByDir.set(dir, binSet)
+        }
+        for (const bn of Object.keys(bin)) {
+          binSet.add(bn)
+        }
+      }
     }
 
     // Determine which node_modules directories to sweep.
@@ -1523,7 +1602,38 @@ module.exports = cls => class Reifier extends cls {
 
     for (const [dir, valid] of nmDirs) {
       await this.#cleanOrphanedTopLevelLinks(dir, valid)
+      await this.#cleanStaleBinLinks(dir, binsByDir.get(dir))
     }
+  }
+
+  // Remove stale bin shims left in node_modules/.bin after an uninstall under linked, where the diff never emits an action to drop them.
+  // A shim is stale when no still-linked package provides its name, or when it is a dangling symlink; matching by name handles both POSIX symlinks and Windows .cmd/.ps1 shims.
+  async #cleanStaleBinLinks (nmDir, validBins = new Set()) {
+    const binDir = resolve(nmDir, '.bin')
+    let names
+    try {
+      names = await readdir(binDir)
+    } catch {
+      return
+    }
+
+    const stale = names.filter(name => {
+      const base = name.replace(/\.(cmd|ps1)$/, '')
+      return !validBins.has(base) || !existsSync(resolve(binDir, name))
+    })
+
+    if (!stale.length) {
+      return
+    }
+
+    log.silly('reify', 'cleaning stale bin links', stale)
+    await promiseAllRejectLate(
+      stale.map(name =>
+        rm(resolve(binDir, name), { force: true })
+          .catch(/* istanbul ignore next -- rm with force rarely fails */
+            er => log.warn('cleanup', `Failed to remove stale bin link ${name}`, er))
+      )
+    )
   }
 
   // Remove node_modules/ entries that aren't represented in the ideal tree.
