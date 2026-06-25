@@ -93,6 +93,8 @@ module.exports = cls => class ActualLoader extends cls {
       transplantFilter = () => true,
       ignoreMissing = false,
       forceActual = false,
+      // always present: the public loadActual merges this.options, which sets installStrategy
+      installStrategy,
     } = options
     this.#filter = filter
     this.#transplantFilter = transplantFilter
@@ -173,6 +175,20 @@ module.exports = cls => class ActualLoader extends cls {
         }
       }
       await Promise.all(promises)
+
+      // Linked undeclared workspaces aren't symlinked into root node_modules, so their edges resolve to null and flags never propagate.
+      // Synthesize the links from the loaded targets. Gated to linked; under hoisted a null workspace edge is a real missing link.
+      if (installStrategy === 'linked') {
+        for (const [name, path] of this.#actualTree.workspaces.entries()) {
+          const edge = this.#actualTree.edgesOut.get(name)
+          // skip workspaces already linked into root node_modules (declared deps)
+          if (edge.to) {
+            continue
+          }
+          const target = this.#cache.get(path)
+          new Link({ parent: this.#actualTree, name, realpath: path, target, pkg: target.package })
+        }
+      }
     }
 
     // .npm-extension runs before packageExtensions, matching the ideal-tree resolution order
@@ -200,6 +216,8 @@ module.exports = cls => class ActualLoader extends cls {
     }
 
     this.#transplant(root)
+
+    this.#repropagateOverrides()
 
     if (global) {
       // need to depend on the children, or else all of them
@@ -389,6 +407,18 @@ module.exports = cls => class ActualLoader extends cls {
     }
   }
 
+  // Re-forward overrides through links after the tree is complete, since a store Link may forward before its subtree resolves and miss a transitive match (npm/cli#9619).
+  #repropagateOverrides () {
+    if (!this.#actualTree.overrides) {
+      return
+    }
+    for (const node of this.#actualTree.inventory.values()) {
+      if (node.isLink && node.overrides) {
+        node.recalculateOutEdgesOverrides()
+      }
+    }
+  }
+
   // .npm-extension transformManifest, like packageExtensions, never rewrites a package's package.json, so re-derive its edges and provenance on a filesystem-scanned actual tree.
   // This executes the root extension code; ignore-extension (and ignore-scripts via flatten) disables it.
   async #applyNpmExtension () {
@@ -438,9 +468,10 @@ module.exports = cls => class ActualLoader extends cls {
 
       const depPromises = []
       for (const [name, edge] of node.edgesOut.entries()) {
-        const notMissing = !edge.missing &&
-          !(edge.to && (edge.to.dummy || edge.to.parent !== node))
-        if (notMissing) {
+        // An unresolved optional edge reports missing === false, so check the target directly.
+        // Otherwise an installed optional dep that lives only as a store sibling is never loaded.
+        const resolved = edge.to && !edge.to.dummy && edge.to.parent === node
+        if (resolved) {
           continue
         }
 

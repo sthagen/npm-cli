@@ -11,7 +11,7 @@ const { callLimit: promiseCallLimit } = require('promise-call-limit')
 const { depth: dfwalk } = require('treeverse')
 const { dirname, resolve, relative, join, sep } = require('node:path')
 const { log, time } = require('proc-log')
-const { existsSync } = require('node:fs')
+const { existsSync, realpathSync } = require('node:fs')
 const { lstat, mkdir, readdir, readlink, rm, symlink } = require('node:fs/promises')
 const { moveFile } = require('@npmcli/fs')
 const { subset, intersects } = require('semver')
@@ -90,7 +90,9 @@ module.exports = cls => class Reifier extends cls {
 
   // public method
   async reify (options = {}) {
-    const linked = (options.installStrategy || this.options.installStrategy) === 'linked'
+    // Global installs are normalized to the shallow strategy in the constructor; honor that here so a per-call installStrategy:'linked' can't re-engage the unsupported linked path.
+    const linked = !this.options.global &&
+      (options.installStrategy || this.options.installStrategy) === 'linked'
 
     if (this.options.packageLockOnly && this.options.global) {
       const er = new Error('cannot generate lockfile for global packages')
@@ -141,6 +143,14 @@ module.exports = cls => class Reifier extends cls {
         // The sweep itself scopes to in-filter workspaces when a filter is active, so it's safe to run for filtered installs too.
         if (!this.options.dryRun && !this.options.packageLockOnly) {
           await this.#cleanOrphanedStoreEntries()
+        }
+      } else if (!this.options.dryRun && !this.options.packageLockOnly) {
+        // The .store directory is exclusively a linked-strategy artifact, and load-actual ignores dot-directories, so the diff never sees it.
+        // Remove it here when switching away from linked so it does not linger under hoisted/nested.
+        // Only do this for a full-project install: a workspace-filtered or --workspaces=false install may leave out-of-scope workspaces with links still pointing into the store.
+        const filtered = this.options.workspaces.length > 0 || !this.options.workspacesEnabled
+        if (!filtered) {
+          await this.#removeStaleStoreDir()
         }
       }
     } finally {
@@ -473,7 +483,10 @@ module.exports = cls => class Reifier extends cls {
       }
       if (includeRootDeps) {
         // add all non-workspace nodes to filterNodes
-        for (const tree of [this.idealTree, this.actualTree]) {
+        // Skip the actual tree under the linked diff wrapper: its edge targets have root===actualTree, not the wrapper, which trips Diff.calculate's filterNode guard.
+        // The ideal-side targets alone scope the diff.
+        const trees = this.#linkedActualForDiff ? [this.idealTree] : [this.idealTree, this.actualTree]
+        for (const tree of trees) {
           for (const { type, to } of tree.edgesOut.values()) {
             if (type !== 'workspace' && to) {
               filterNodes.push(to)
@@ -921,6 +934,10 @@ module.exports = cls => class Reifier extends cls {
       if (child.isLink && child.resolved?.startsWith('file:.store/') && !existsSync(child.realpath)) {
         continue
       }
+      // Skip a link whose on-disk target is a valid-but-wrong store key (e.g. an interrupted update), so the diff repoints it via ADD.
+      if (child.isLink && this.#linkTargetMismatch(child)) {
+        continue
+      }
       let entry
       if (child.isLink) {
         entry = new IsolatedLink(child)
@@ -958,6 +975,12 @@ module.exports = cls => class Reifier extends cls {
     wrapper.inventory = actualTree.inventory
 
     return wrapper
+  }
+
+  // True when the link's on-disk target resolves to a different path than its ideal target.
+  // The caller only invokes this once both paths exist, so realpathSync won't throw.
+  #linkTargetMismatch (child) {
+    return realpathSync(child.path) !== realpathSync(child.realpath)
   }
 
   // When extracting a registry-resolved package, the spec we hand to pacote is name@URL.
@@ -1437,6 +1460,18 @@ module.exports = cls => class Reifier extends cls {
     timeEnd()
   }
 
+  // Remove the root .store left behind by a previous linked install when reifying under a non-linked strategy.
+  async #removeStaleStoreDir () {
+    const storeDir = resolve(this.path, 'node_modules', '.store')
+    if (!existsSync(storeDir)) {
+      return
+    }
+    log.silly('reify', 'removing stale .store from a previous linked install')
+    await rm(storeDir, { recursive: true, force: true })
+      .catch(/* istanbul ignore next -- rm with force rarely fails */
+        er => log.warn('cleanup', 'Failed to remove stale .store directory', er))
+  }
+
   // After a linked install, scan node_modules/.store/ and remove any directories that are not referenced by the current ideal tree.
   // Store entries become orphaned when dependencies are updated or removed, because the diff never sees the old store keys.
   // Then sweep the top-level node_modules/ for orphaned symlinks (e.g. an uninstalled dep whose store entry was just removed) so we don't leave dangling links.
@@ -1475,7 +1510,7 @@ module.exports = cls => class Reifier extends cls {
     // Locations are normalized to forward slashes here because IsolatedNode/IsolatedLink locations are built with path.join, which uses backslashes on Windows.
     const validKeys = new Set()
     const nmDirs = new Map()
-    // Valid bin shim names per node_modules dir, collected from each top-level link's package.bin so the .bin sweep keeps only shims a still-linked package provides.
+    // Valid bin shim names per node_modules dir, collected from each top-level entry's package.bin so the .bin sweep keeps only shims a still-installed package provides.
     const binsByDir = new Map()
     const NM_PREFIX = 'node_modules/'
     const STORE_MARKER = '/.store/'
@@ -1489,13 +1524,11 @@ module.exports = cls => class Reifier extends cls {
         validKeys.add(key)
         continue
       }
-      if (!child.isLink) {
-        continue
-      }
       // Tree-only Links never exist on disk; skipping them lets the sweep remove any stale self-link left by an older npm version.
-      if (child.isUndeclaredWorkspaceLink) {
+      if (child.isLink && child.isUndeclaredWorkspaceLink) {
         continue
       }
+      // Real top-level Nodes (e.g. the root's bundled deps) fall through here too, so they are recorded as valid and never swept as stale.
       const nmIdx = loc.lastIndexOf(NM_PREFIX)
       if (nmIdx === -1 || loc.includes(STORE_MARKER)) {
         continue
@@ -1639,8 +1672,10 @@ module.exports = cls => class Reifier extends cls {
   // Remove node_modules/ entries that aren't represented in the ideal tree.
   // Run for the project root and each workspace's node_modules.
   // The linked diff path can't see these because #buildLinkedActualForDiff derives the actual tree from the ideal, so removed deps are never compared.
-  // Only symlinks whose target resolves inside the project root are removed — that covers store links (node_modules/.store/...) and workspace self-links (e.g. node_modules/<ws> -> ../packages/<ws>) that npm itself created.
-  // Symlinks pointing outside the project (e.g. `npm link foo` without --save targeting the global prefix, or hand-made `ln -s` to an external path) and real directories are preserved.
+  // Two kinds of stale entry are removed:
+  //   - symlinks whose target resolves inside the project root — store links (node_modules/.store/...) and workspace self-links (e.g. node_modules/<ws> -> ../packages/<ws>) that npm itself created.
+  //   - real package directories — hoisted-layout deps left behind when switching from the hoisted strategy to linked, where every valid top-level entry is a symlink.
+  // Symlinks pointing outside the project (e.g. `npm link foo` without --save targeting the global prefix, or hand-made `ln -s` to an external path) and non-package real directories are preserved.
   async #cleanOrphanedTopLevelLinks (nmDir, validTopLevel) {
     const projectPrefix = resolve(this.path) + sep
     let dirents
@@ -1661,7 +1696,15 @@ module.exports = cls => class Reifier extends cls {
       return resolve(dirname(linkPath), target).startsWith(projectPrefix)
     }
 
+    // A real directory is stale only when it is an actual package (has a package.json), so unrelated user directories are never touched.
+    const isStaleRealPkg = (dirent, entPath) =>
+      dirent.isDirectory() && existsSync(resolve(entPath, 'package.json'))
+
+    const isOrphan = async (dirent, entPath) =>
+      (dirent.isSymbolicLink() && await isOurOrphan(entPath)) || isStaleRealPkg(dirent, entPath)
+
     const orphaned = []
+    const scopes = new Set()
     for (const ent of dirents) {
       // skip npm-managed entries (.bin, .store, .package-lock.json, etc)
       if (ent.name.startsWith('.')) {
@@ -1677,11 +1720,12 @@ module.exports = cls => class Reifier extends cls {
         }
         for (const pkgEnt of scoped) {
           const key = `${ent.name}${sep}${pkgEnt.name}`
-          if (!validTopLevel.has(key) && pkgEnt.isSymbolicLink() && await isOurOrphan(resolve(nmDir, key))) {
+          if (!validTopLevel.has(key) && await isOrphan(pkgEnt, resolve(nmDir, key))) {
             orphaned.push(key)
+            scopes.add(ent.name)
           }
         }
-      } else if (!validTopLevel.has(ent.name) && ent.isSymbolicLink() && await isOurOrphan(resolve(nmDir, ent.name))) {
+      } else if (!validTopLevel.has(ent.name) && await isOrphan(ent, resolve(nmDir, ent.name))) {
         orphaned.push(ent.name)
       }
     }
@@ -1690,13 +1734,28 @@ module.exports = cls => class Reifier extends cls {
       return
     }
 
-    log.silly('reify', 'cleaning orphaned top-level links', orphaned)
+    log.silly('reify', 'cleaning orphaned top-level entries', orphaned)
     await promiseAllRejectLate(
       orphaned.map(name =>
         rm(resolve(nmDir, name), { recursive: true, force: true })
           .catch(/* istanbul ignore next -- rm with force rarely fails */
-            er => log.warn('cleanup', `Failed to remove orphaned link ${name}`, er))
+            er => log.warn('cleanup', `Failed to remove orphaned entry ${name}`, er))
       )
+    )
+
+    // Removing the last package under a scope leaves an empty @scope directory behind, so prune any scope directory that is now empty.
+    await promiseAllRejectLate(
+      [...scopes].map(async scope => {
+        const scopeDir = resolve(nmDir, scope)
+        try {
+          const remaining = await readdir(scopeDir)
+          if (!remaining.length) {
+            await rm(scopeDir, { recursive: true, force: true })
+          }
+        } catch {
+          /* istanbul ignore next -- readdir of a scope dir we just listed should not fail */
+        }
+      })
     )
   }
 

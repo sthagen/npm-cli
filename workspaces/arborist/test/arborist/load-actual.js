@@ -303,6 +303,49 @@ t.test('transplant workspace targets, even if links not present', async t => {
   }), 'do not transplant node named "a"')
 })
 
+t.test('linked strategy propagates dep flags into undeclared workspaces', async t => {
+  // Undeclared workspaces aren't in root node_modules under linked; without the fix their edges resolve to null and stay dev.
+  // `tools` is also a devDependency of `app`, so it is reached by both a prod root link and a dev `app` link.
+  // `app` is linked into root node_modules, so its edge already resolves and the synthesis is skipped.
+  const path = t.testdir({
+    'package.json': JSON.stringify({
+      name: 'root',
+      workspaces: ['packages/*'],
+    }),
+    node_modules: {
+      '@test': {
+        app: t.fixture('symlink', '../../packages/app'),
+      },
+    },
+    packages: {
+      app: {
+        'package.json': JSON.stringify({
+          name: '@test/app',
+          version: '1.0.0',
+          devDependencies: { '@test/tools': '*' },
+        }),
+        node_modules: {
+          '@test': {
+            tools: t.fixture('symlink', '../../../tools'),
+          },
+        },
+      },
+      tools: {
+        'package.json': JSON.stringify({
+          name: '@test/tools',
+          version: '1.0.0',
+        }),
+      },
+    },
+  })
+  const tree = await loadActual(path, { installStrategy: 'linked' })
+  const byLocation = loc => [...tree.inventory.values()].find(n => n.location === loc)
+  const app = byLocation('packages/app')
+  const tools = byLocation('packages/tools')
+  t.equal(app.dev, false, 'app workspace is prod')
+  t.equal(tools.dev, false, 'tools workspace is prod, not overwritten by the dev app link')
+})
+
 t.test('load workspaces when loading from hidden lockfile', async t => {
   const path = t.testdir({
     'package.json': JSON.stringify({
@@ -546,6 +589,72 @@ t.test('applies root packageExtensions to a linked actual tree', async t => {
   t.strictSame(brokenLink.packageExtensionsApplied, applied, 'provenance mirrored onto the link')
 })
 
+t.test('forwards a transitive override through a linked store link — npm/cli#9619', async t => {
+  // The override must propagate through the intermediate store Link whose own direct deps don't name the overridden package, or `npm ls` reports the edge `invalid` instead of `overridden`.
+  // Shaped like glob -> minimatch -> brace-expansion: the override target sits two links deep, with a shared node reached by two paths.
+  const path = t.testdir({
+    'package.json': JSON.stringify({
+      name: 'root',
+      version: '1.0.0',
+      dependencies: { a: '1.0.0' },
+      overrides: { leaf: '2.0.0' },
+    }),
+    node_modules: {
+      a: t.fixture('symlink', '.store/a@1.0.0/node_modules/a'),
+      '.store': {
+        'a@1.0.0': {
+          node_modules: {
+            a: { 'package.json': JSON.stringify({ name: 'a', version: '1.0.0', dependencies: { b: '1.0.0', c: '1.0.0' } }) },
+            b: t.fixture('symlink', '../../b@1.0.0/node_modules/b'),
+            c: t.fixture('symlink', '../../c@1.0.0/node_modules/c'),
+          },
+        },
+        'b@1.0.0': {
+          node_modules: {
+            // leaf is declared ^1.0.0 but overridden to 2.0.0, which is outside that range
+            b: { 'package.json': JSON.stringify({ name: 'b', version: '1.0.0', dependencies: { leaf: '^1.0.0', shared: '1.0.0' } }) },
+            leaf: t.fixture('symlink', '../../leaf@2.0.0/node_modules/leaf'),
+            shared: t.fixture('symlink', '../../shared@1.0.0/node_modules/shared'),
+          },
+        },
+        'c@1.0.0': {
+          node_modules: {
+            // c's subtree has no overridden package but reaches shared via both c and c->d, so its walk revisits a seen node
+            c: { 'package.json': JSON.stringify({ name: 'c', version: '1.0.0', dependencies: { d: '1.0.0', shared: '1.0.0' } }) },
+            d: t.fixture('symlink', '../../d@1.0.0/node_modules/d'),
+            shared: t.fixture('symlink', '../../shared@1.0.0/node_modules/shared'),
+          },
+        },
+        'd@1.0.0': {
+          node_modules: {
+            d: { 'package.json': JSON.stringify({ name: 'd', version: '1.0.0', dependencies: { shared: '1.0.0' } }) },
+            shared: t.fixture('symlink', '../../shared@1.0.0/node_modules/shared'),
+          },
+        },
+        'leaf@2.0.0': {
+          node_modules: {
+            leaf: { 'package.json': JSON.stringify({ name: 'leaf', version: '2.0.0' }) },
+          },
+        },
+        'shared@1.0.0': {
+          node_modules: {
+            shared: { 'package.json': JSON.stringify({ name: 'shared', version: '1.0.0' }) },
+          },
+        },
+      },
+    },
+  })
+
+  const tree = await loadActual(path)
+  const b = tree.children.get('a').target.edgesOut.get('b').to.target
+  const leafEdge = b.edgesOut.get('leaf')
+  t.ok(leafEdge && !leafEdge.error, 'transitive overridden edge resolves without error')
+  t.ok(leafEdge.overrides, 'edge carries the override rule')
+  t.equal(leafEdge.spec, '2.0.0', 'edge spec is the overridden version')
+  t.equal(leafEdge.rawSpec, '^1.0.0', 'edge rawSpec is the original declared range')
+  t.equal(leafEdge.to.target.version, '2.0.0', 'edge resolves to the overridden package')
+})
+
 t.test('store nodes do not load devDependencies as required edges', async t => {
   // A package in the linked store is structurally a tree top, so without the isInStore guard its devDependencies would load as required edges and surface as missing (e.g. npm sbom ESBOMPROBLEMS).
   const path = t.testdir({
@@ -576,6 +685,43 @@ t.test('store nodes do not load devDependencies as required edges', async t => {
   const dep = tree.children.get('dep').target
   t.equal(dep.isInStore, true, 'store node is flagged isInStore')
   t.notOk(dep.edgesOut.get('a-dev-dep'), 'devDependency of a store node is not a required edge')
+})
+
+t.test('loads an installed transitive optional dep from the linked store', async t => {
+  // A transitive optional dep lives as a store sibling, and its edge reports missing === false despite having no target.
+  // #findMissingEdges must still walk it, or npm sbom/query omit the installed dep.
+  const path = t.testdir({
+    'package.json': JSON.stringify({
+      name: 'root',
+      version: '1.0.0',
+      dependencies: { dep: '1.0.0' },
+    }),
+    node_modules: {
+      dep: t.fixture('symlink', '.store/dep@1.0.0/node_modules/dep'),
+      '.store': {
+        'dep@1.0.0': {
+          node_modules: {
+            dep: {
+              'package.json': JSON.stringify({
+                name: 'dep',
+                version: '1.0.0',
+                optionalDependencies: { opt: '^1.0.0' },
+              }),
+            },
+            // the optional dep is installed as a store sibling of its consumer
+            opt: { 'package.json': JSON.stringify({ name: 'opt', version: '1.0.0' }) },
+          },
+        },
+      },
+    },
+  })
+
+  const tree = await loadActual(path)
+  const dep = tree.children.get('dep').target
+  const edge = dep.edgesOut.get('opt')
+  t.ok(edge && !edge.error, 'optional edge resolves')
+  t.equal(edge.to?.name, 'opt', 'edge resolves to the installed package')
+  t.ok([...tree.inventory.values()].some(n => n.name === 'opt'), 'opt is present in the inventory')
 })
 
 t.test('a project located under a .store path still loads its own devDependencies', async t => {

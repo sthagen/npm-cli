@@ -4399,6 +4399,156 @@ t.test('install strategy linked', async (t) => {
     t.ok(fs.lstatSync(scmd), 'surviving semver.cmd kept')
     t.ok(fs.lstatSync(sps1), 'surviving semver.ps1 kept')
   })
+
+  t.test('switching hoisted -> linked removes stale real top-level dirs', async t => {
+    // Regression test for https://github.com/npm/cli/issues/9615
+    const path = t.testdir({
+      'package.json': JSON.stringify({
+        name: 'sw', version: '1.0.0', dependencies: { minimatch: '3.0.4' },
+      }),
+    })
+    createRegistry(t, true)
+
+    // A hoisted install lays the transitive deps out as real top-level dirs.
+    await reify(path, { installStrategy: 'hoisted' })
+    const nm = resolve(path, 'node_modules')
+    for (const dep of ['balanced-match', 'brace-expansion', 'concat-map']) {
+      t.ok(fs.statSync(resolve(nm, dep)).isDirectory(), `${dep} is a real dir under hoisted`)
+    }
+
+    // Plant a stale scoped real package to cover the scoped removal and empty-scope pruning path.
+    const scopedPkg = resolve(nm, '@scope/stale')
+    fs.mkdirSync(scopedPkg, { recursive: true })
+    fs.writeFileSync(resolve(scopedPkg, 'package.json'),
+      JSON.stringify({ name: '@scope/stale', version: '1.0.0' }))
+    // A non-package real dir must be preserved.
+    fs.mkdirSync(resolve(nm, 'not-a-package'), { recursive: true })
+
+    // Switching to linked must remove those stale real dirs, leaving only the symlink + .store.
+    await reify(path, { installStrategy: 'linked' })
+    for (const dep of ['balanced-match', 'brace-expansion', 'concat-map']) {
+      t.notOk(fs.existsSync(resolve(nm, dep)), `${dep} stale real dir removed after switch to linked`)
+    }
+    t.notOk(fs.existsSync(scopedPkg), 'stale scoped real package removed')
+    t.notOk(fs.existsSync(resolve(nm, '@scope')), 'emptied scope dir pruned')
+    t.ok(fs.existsSync(resolve(nm, 'not-a-package')), 'non-package real dir preserved')
+    t.ok(fs.lstatSync(resolve(nm, 'minimatch')).isSymbolicLink(), 'minimatch is a store symlink')
+    t.ok(fs.statSync(resolve(nm, '.store')).isDirectory(), '.store created')
+  })
+
+  t.test('switching linked -> hoisted removes the stale .store dir', async t => {
+    // Regression test for https://github.com/npm/cli/issues/9615
+    const path = t.testdir({
+      'package.json': JSON.stringify({
+        name: 'sw', version: '1.0.0', dependencies: { minimatch: '3.0.4' },
+      }),
+    })
+    createRegistry(t, true)
+
+    await reify(path, { installStrategy: 'linked' })
+    const nm = resolve(path, 'node_modules')
+    t.ok(fs.statSync(resolve(nm, '.store')).isDirectory(), '.store created under linked')
+
+    // A hoisted install must not leave the linked store behind.
+    await reify(path, { installStrategy: 'hoisted' })
+    t.notOk(fs.existsSync(resolve(nm, '.store')), '.store removed after switch to hoisted')
+    t.ok(fs.statSync(resolve(nm, 'balanced-match')).isDirectory(), 'transitive dep hoisted to a real dir')
+  })
+
+  t.test('a partial hoisted install does not wipe a still-referenced linked .store', async t => {
+    // Regression test for https://github.com/npm/cli/issues/9615
+    // A workspace-filtered or --workspaces=false hoisted install must not remove the root .store, since out-of-scope workspaces still link into it.
+    const path = t.testdir({
+      'package.json': JSON.stringify({
+        name: 'root', version: '1.0.0', workspaces: ['packages/*'],
+      }),
+      packages: {
+        // a is the out-of-scope workspace that keeps a live link into the store.
+        a: { 'package.json': JSON.stringify({ name: 'a', version: '1.0.0', dependencies: { minimatch: '3.0.4' } }) },
+        b: { 'package.json': JSON.stringify({ name: 'b', version: '1.0.0' }) },
+      },
+    })
+    createRegistry(t, true)
+    const nm = resolve(path, 'node_modules')
+    const aLink = resolve(path, 'packages/a/node_modules/minimatch')
+    // a's dep resolves through the root .store, so deleting the store would break it.
+    const stillLinked = msg => t.ok(
+      fs.lstatSync(aLink).isSymbolicLink() && fs.existsSync(fs.realpathSync(aLink)), msg)
+
+    await reify(path, { installStrategy: 'linked' })
+    t.ok(fs.statSync(resolve(nm, '.store')).isDirectory(), '.store created under linked')
+    t.match(fs.realpathSync(aLink), /node_modules[\\/]\.store[\\/]/, 'workspace a links into the store')
+
+    // Filter to workspace b: a is out of scope and must keep its live store link.
+    await reify(path, { installStrategy: 'hoisted', workspaces: ['b'] })
+    t.ok(fs.existsSync(resolve(nm, '.store')), '.store kept during a workspace-filtered install')
+    stillLinked('workspace a still resolves through the store after the filtered install')
+
+    await reify(path, { installStrategy: 'hoisted', workspacesEnabled: false })
+    t.ok(fs.existsSync(resolve(nm, '.store')), '.store kept during a --workspaces=false install')
+    stillLinked('workspace a still resolves through the store after the --workspaces=false install')
+
+    await reify(path, { installStrategy: 'hoisted' })
+    t.notOk(fs.existsSync(resolve(nm, '.store')), '.store removed by a full hoisted install')
+  })
+})
+
+t.test('linked strategy --workspaces=false and --include-workspace-root do not crash', async t => {
+  // Regression for #9614. Under linked, the root-dep filter nodes came from the real actual tree, not the synthesized diff wrapper, tripping Diff.calculate's "invalid filterNode" guard.
+  const manifest = deps => JSON.stringify({
+    name: 'root',
+    version: '1.0.0',
+    workspaces: ['packages/*'],
+    dependencies: deps,
+  })
+  const path = t.testdir({
+    'package.json': manifest({ abbrev: '1.1.1', wrappy: '1.0.2' }),
+    packages: {
+      a: {
+        'package.json': JSON.stringify({ name: 'a', version: '1.0.0' }),
+      },
+    },
+  })
+
+  createRegistry(t, true)
+  await reify(path, { installStrategy: 'linked' })
+
+  // --workspaces=false: only root deps are in scope.
+  await t.resolves(
+    reify(path, { installStrategy: 'linked', workspacesEnabled: false }),
+    '--workspaces=false does not crash'
+  )
+
+  // -w a --include-workspace-root: workspace a plus root deps in scope.
+  await t.resolves(
+    reify(path, { installStrategy: 'linked', workspaces: ['a'], includeWorkspaceRoot: true }),
+    '-w a --include-workspace-root does not crash'
+  )
+
+  t.ok(fs.lstatSync(resolve(path, 'node_modules/abbrev')).isSymbolicLink(), 'root dep still linked')
+
+  // Dropping the actual-side filter nodes must not stop a filtered install from pruning a removed root dep.
+  fs.writeFileSync(resolve(path, 'package.json'), manifest({ abbrev: '1.1.1' }))
+  await reify(path, { installStrategy: 'linked', workspacesEnabled: false })
+  t.notOk(fs.existsSync(resolve(path, 'node_modules/wrappy')), 'removed root dep pruned under filtered install')
+  t.ok(fs.lstatSync(resolve(path, 'node_modules/abbrev')).isSymbolicLink(), 'remaining root dep still linked')
+})
+
+t.test('global install ignores a per-call linked strategy', async t => {
+  // Regression for #9614. Global installs are normalized to shallow; a per-call installStrategy:'linked' must not re-engage the linked path, which would trip Diff.calculate's filterNode guard on re-install and delete the global package.
+  const path = t.testdir({ lib: {} })
+  const lib = resolve(path, 'lib')
+  const nm = resolve(lib, 'node_modules')
+
+  createRegistry(t, true)
+  await reify(lib, { add: ['abbrev@1.1.1'], global: true })
+
+  // Re-install the already-present package under linked: must not crash and must not remove it.
+  await t.resolves(
+    reify(lib, { add: ['abbrev@1.1.1'], global: true, installStrategy: 'linked' }),
+    'global re-install under linked does not crash'
+  )
+  t.strictSame(fs.readdirSync(nm), ['abbrev'], 'global package retained, no .store created')
 })
 
 t.test('linked strategy exposes store node_modules via NODE_PATH for lifecycle scripts', async t => {
