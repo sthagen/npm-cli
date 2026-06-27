@@ -346,6 +346,125 @@ t.test('linked strategy propagates dep flags into undeclared workspaces', async 
   t.equal(tools.dev, false, 'tools workspace is prod, not overwritten by the dev app link')
 })
 
+t.test('linked strategy surfaces undeclared workspaces', async t => {
+  // Under linked, undeclared workspaces are not symlinked into root node_modules, so loadActual must synthesize their root links for their edges to resolve (npm/cli#9618).
+  const fixture = {
+    'package.json': JSON.stringify({
+      name: 'root',
+      version: '1.0.0',
+      workspaces: ['packages/*'],
+      // declared workspace is symlinked at root; undeclared one is not
+      dependencies: { a: '*' },
+    }),
+    node_modules: {
+      a: t.fixture('symlink', '../packages/a'),
+    },
+    packages: {
+      a: { 'package.json': JSON.stringify({ name: 'a', version: '1.2.3' }) },
+      b: { 'package.json': JSON.stringify({ name: 'b', version: '1.2.3' }) },
+    },
+  }
+
+  const assertVisible = (t, tree) => {
+    const aLink = tree.children.get('a')
+    const bLink = tree.children.get('b')
+    t.ok(aLink, 'declared workspace a present (from disk symlink)')
+    t.ok(bLink, 'undeclared workspace b synthesized')
+    t.equal(tree.edgesOut.get('b').to, bLink, 'workspace edge b resolves to its link')
+    t.notOk(tree.edgesOut.get('b').missing, 'workspace edge b is not missing')
+    t.equal(bLink.target.version, '1.2.3', 'b target loaded')
+  }
+
+  t.test('filesystem scan', async t => {
+    const path = t.testdir(fixture)
+    assertVisible(t, await loadActual(path, { installStrategy: 'linked' }))
+  })
+
+  t.test('hidden lockfile', async t => {
+    const path = t.testdir({
+      ...fixture,
+      node_modules: {
+        a: t.fixture('symlink', '../packages/a'),
+        '.package-lock.json': JSON.stringify({
+          name: 'root',
+          lockfileVersion: 3,
+          requires: true,
+          packages: {
+            'node_modules/a': { resolved: 'packages/a', link: true },
+            'packages/a': { version: '1.2.3' },
+            'packages/b': { version: '1.2.3' },
+          },
+        }),
+      },
+    })
+    const hidden = resolve(path, 'node_modules/.package-lock.json')
+    const then = Date.now() + 10000
+    fs.utimesSync(hidden, new Date(then), new Date(then))
+    assertVisible(t, await loadActual(path, { installStrategy: 'linked' }))
+  })
+
+  t.test('no workspaces is a no-op', async t => {
+    const path = t.testdir({
+      'package.json': JSON.stringify({ name: 'root', version: '1.0.0' }),
+    })
+    const tree = await loadActual(path, { installStrategy: 'linked' })
+    t.notOk(tree.workspaces, 'no workspaces set')
+    t.equal(tree.children.size, 0, 'no links synthesized')
+  })
+
+  t.test('does not clobber an existing root child', async t => {
+    // an undeclared workspace that already has a root symlink keeps that child instead of a synthesized link
+    const path = t.testdir({
+      'package.json': JSON.stringify({
+        name: 'root',
+        version: '1.0.0',
+        workspaces: ['packages/*'],
+      }),
+      node_modules: {
+        b: t.fixture('symlink', '../packages/b'),
+      },
+      packages: {
+        a: { 'package.json': JSON.stringify({ name: 'a', version: '1.2.3' }) },
+        b: { 'package.json': JSON.stringify({ name: 'b', version: '1.2.3' }) },
+      },
+    })
+    const tree = await loadActual(path, { installStrategy: 'linked' })
+    t.equal(tree.children.get('b').realpath, resolve(path, 'packages/b'), 'existing b child preserved')
+    t.ok(tree.children.get('a'), 'undeclared a still synthesized')
+  })
+
+  t.test('skips a workspace with no loaded target', async t => {
+    // hidden lockfile omits packages/b, so it is in the workspaces map but never loaded; it must be skipped, not crash
+    const path = t.testdir({
+      'package.json': JSON.stringify({
+        name: 'root',
+        version: '1.0.0',
+        workspaces: ['packages/*'],
+      }),
+      node_modules: {
+        '.package-lock.json': JSON.stringify({
+          name: 'root',
+          lockfileVersion: 3,
+          requires: true,
+          packages: {
+            'packages/a': { version: '1.2.3' },
+          },
+        }),
+      },
+      packages: {
+        a: { 'package.json': JSON.stringify({ name: 'a', version: '1.2.3' }) },
+        b: { 'package.json': JSON.stringify({ name: 'b', version: '1.2.3' }) },
+      },
+    })
+    const hidden = resolve(path, 'node_modules/.package-lock.json')
+    const then = Date.now() + 10000
+    fs.utimesSync(hidden, new Date(then), new Date(then))
+    const tree = await loadActual(path, { installStrategy: 'linked' })
+    t.ok(tree.children.get('a'), 'loaded workspace a synthesized')
+    t.notOk(tree.children.get('b'), 'unloaded workspace b skipped')
+  })
+})
+
 t.test('load workspaces when loading from hidden lockfile', async t => {
   const path = t.testdir({
     'package.json': JSON.stringify({
@@ -652,6 +771,72 @@ t.test('forwards a transitive override through a linked store link — npm/cli#9
   t.ok(leafEdge.overrides, 'edge carries the override rule')
   t.equal(leafEdge.spec, '2.0.0', 'edge spec is the overridden version')
   t.equal(leafEdge.rawSpec, '^1.0.0', 'edge rawSpec is the original declared range')
+  t.equal(leafEdge.to.target.version, '2.0.0', 'edge resolves to the overridden package')
+})
+
+t.test('forwards a transitive override across a file: link boundary — npm/cli#9659', async t => {
+  // The override path crosses a file: link (root -> a) before entering the store chain (a -> b -> leaf).
+  // Loading from the hidden lockfile, the file link target's subtree resolves late, so override repropagation must run once all edges are resolved or `npm ls` reports the edge `invalid`.
+  const path = t.testdir({
+    'package.json': JSON.stringify({
+      name: 'root',
+      version: '1.0.0',
+      dependencies: { a: 'file:./pkgs/a' },
+      overrides: { leaf: '2.0.0' },
+    }),
+    pkgs: {
+      a: {
+        'package.json': JSON.stringify({ name: 'a', version: '1.0.0', dependencies: { b: '1.0.0' } }),
+        node_modules: {
+          b: t.fixture('symlink', '../../../node_modules/.store/b@1.0.0/node_modules/b'),
+        },
+      },
+    },
+    node_modules: {
+      a: t.fixture('symlink', '../pkgs/a'),
+      '.store': {
+        'b@1.0.0': {
+          node_modules: {
+            // leaf is declared ^1.0.0 but overridden to 2.0.0, outside that range
+            b: { 'package.json': JSON.stringify({ name: 'b', version: '1.0.0', dependencies: { leaf: '^1.0.0' } }) },
+            leaf: t.fixture('symlink', '../../leaf@2.0.0/node_modules/leaf'),
+          },
+        },
+        'leaf@2.0.0': {
+          node_modules: {
+            leaf: { 'package.json': JSON.stringify({ name: 'leaf', version: '2.0.0' }) },
+          },
+        },
+      },
+      '.package-lock.json': JSON.stringify({
+        name: 'root',
+        lockfileVersion: 3,
+        requires: true,
+        packages: {
+          '': { name: 'root', version: '1.0.0', dependencies: { a: 'file:./pkgs/a' }, overrides: { leaf: '2.0.0' } },
+          'node_modules/a': { resolved: 'pkgs/a', link: true },
+          'pkgs/a': { version: '1.0.0', dependencies: { b: '1.0.0' } },
+          'pkgs/a/node_modules/b': { resolved: 'node_modules/.store/b@1.0.0/node_modules/b', link: true },
+          'node_modules/.store/b@1.0.0': {},
+          'node_modules/.store/b@1.0.0/node_modules/b': { version: '1.0.0', dependencies: { leaf: '^1.0.0' } },
+          'node_modules/.store/b@1.0.0/node_modules/leaf': { resolved: 'node_modules/.store/leaf@2.0.0/node_modules/leaf', link: true },
+          'node_modules/.store/leaf@2.0.0': {},
+          'node_modules/.store/leaf@2.0.0/node_modules/leaf': { version: '2.0.0' },
+        },
+      }),
+    },
+  })
+  // make the hidden lockfile the newest entry so loadActual loads from it
+  const hidden = resolve(path, 'node_modules/.package-lock.json')
+  const then = Date.now() + 10000
+  fs.utimesSync(hidden, new Date(then), new Date(then))
+
+  const tree = await loadActual(path)
+  const b = tree.children.get('a').target.edgesOut.get('b').to.target
+  const leafEdge = b.edgesOut.get('leaf')
+  t.ok(leafEdge && !leafEdge.error, 'transitive overridden edge resolves without error')
+  t.ok(leafEdge.overrides, 'edge carries the override rule')
+  t.equal(leafEdge.spec, '2.0.0', 'edge spec is the overridden version')
   t.equal(leafEdge.to.target.version, '2.0.0', 'edge resolves to the overridden package')
 })
 
