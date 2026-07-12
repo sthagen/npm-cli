@@ -1,5 +1,29 @@
 # Changelog
 
+## [11.0.0](https://github.com/npm/cli/compare/config-v11.0.0-pre.3...config-v11.0.0) (2026-07-08)
+### ⚠️ BREAKING CHANGES
+* `npm shrinkwrap` is removed, the `shrinkwrap` config alias is removed, and `npm-shrinkwrap.json` is no longer loaded or honored at the project root or from inside dependency tarballs. Rename project-root `npm-shrinkwrap.json` to `package-lock.json`; use `bundleDependencies` if you need to ship a locked dependency tree.
+* The default license for `npm init` has been changed from "ISC" to an empty string. If not set, the license field will be omitted from new packages.
+* `npm` now supports node `^22.22.2 || ^24.15.0 || >=26.0.0`
+* allow-git and allow-remote now default to "none"; set them to "all" (or "root") to install git or user-supplied tarball-URL dependencies.
+* unknown configs in .npmrc, unknown CLI flags, abbreviated flags, and single-hyphen multi-char shorthands now throw instead of warning.
+### Features
+* [`5b83698`](https://github.com/npm/cli/commit/5b83698a4f76e3f2962b9954dddb180fa85d4c77) [#9737](https://github.com/npm/cli/pull/9737) trigger release process (#9737) (@reggi)
+
+## [11.0.0-pre.3](https://github.com/npm/cli/compare/config-v11.0.0-pre.2...config-v11.0.0-pre.3) (2026-07-08)
+### Features
+* [`fd75880`](https://github.com/npm/cli/commit/fd7588081c1944d718715c17adb2cd125d5cefc5) [#9729](https://github.com/npm/cli/pull/9729) warn instead of error on unknown .npmrc configs (#9729) (@reggi)
+
+## [11.0.0-pre.2](https://github.com/npm/cli/compare/config-v11.0.0-pre.1...config-v11.0.0-pre.2) (2026-06-29)
+### Features
+* [`b51d156`](https://github.com/npm/cli/commit/b51d156fd9858f418775df9c70859377eba1fa0c) [#9672](https://github.com/npm/cli/pull/9672) arborist: extend replace-registry-host with URL prefix matching (#6110) (#9672) (@u2mejc)
+* [`86416a6`](https://github.com/npm/cli/commit/86416a626e4599791c5d8115ed08aa4369774844) [#9674](https://github.com/npm/cli/pull/9674) graduate the linked install strategy from experimental to stable (#9674) (@manzoorwanijk)
+* [`58cd8f5`](https://github.com/npm/cli/commit/58cd8f591d0fdeafbb8f477fb8b8f5aa2e042c90) [#9586](https://github.com/npm/cli/pull/9586) `.npm-extension` transformManifest for imperative manifest repairs (#9586) (@manzoorwanijk)
+### Bug Fixes
+* [`7655822`](https://github.com/npm/cli/commit/765582219fee6ca599ad65681c7b63168801aa15) [#9597](https://github.com/npm/cli/pull/9597) arborist: don't flag inert optional deps in strict-allow-scripts (#9597) (@JamieMagee)
+### Documentation
+* [`fdcfcee`](https://github.com/npm/cli/commit/fdcfcee5b68fa3e0dce1afaa7f4ac7d32d74b5cd) [#9678](https://github.com/npm/cli/pull/9678) recommend install-strategy=linked to catch phantom dependencies (#9678) (@manzoorwanijk)
+
 ## [11.0.0-pre.1](https://github.com/npm/cli/compare/config-v11.0.0-pre.0...config-v11.0.0-pre.1) (2026-06-19)
 ### ⚠️ BREAKING CHANGES
 * The default license for `npm init` has been changed from "ISC" to an empty string. If not set, the license field will be omitted from new packages.

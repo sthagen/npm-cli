@@ -1278,6 +1278,14 @@ const definitions = {
       nested: (formerly --legacy-bundling) install in place, no hoisting.
       shallow (formerly --global-style) only install direct deps at top-level.
       linked: install in node_modules/.store, link in place, unhoisted.
+
+      We recommend that package authors use \`--install-strategy=linked\`
+      during development to catch undeclared ("phantom") dependencies before
+      publishing: the isolated layout only exposes a package's declared
+      dependencies, so an \`import\` of a package that was never added to
+      \`package.json\` can fail instead of resolving by accident and shipping
+      broken. See [Catching undeclared ("phantom")
+      dependencies](/using-npm/developers#catching-undeclared-phantom-dependencies).
     `,
     flatten,
   }),
@@ -2048,7 +2056,7 @@ const definitions = {
   }),
   'replace-registry-host': new Definition('replace-registry-host', {
     default: 'npmjs',
-    hint: '<npmjs|never|always> | hostname',
+    hint: '<npmjs|never|always> | hostname | url',
     type: ['npmjs', 'never', 'always', String],
     description: `
       Defines behavior for replacing the registry host in a lockfile with the
@@ -2059,7 +2067,14 @@ const definitions = {
       "never", then use the registry value. If set to "always", then replace the
       registry host with the configured host every time.
 
-      You may also specify a bare hostname (e.g., "registry.npmjs.org").
+      You may also specify a bare hostname (e.g., "registry.npmjs.org") to only
+      replace URLs coming from that host.
+
+      You may also specify a full URL including a path (e.g.,
+      "https://old-registry.example.com/npm/path"). In that case, resolved URLs
+      whose host and path begin with that prefix will have the entire prefix
+      replaced with the configured registry URL (host and path), without
+      duplicating path segments.
     `,
     flatten,
   }),
@@ -2487,6 +2502,18 @@ const definitions = {
       Optional dependencies that cannot be installed on the current platform
       or engine (a non-matching \`os\`, \`cpu\`, or \`libc\`) are not flagged,
       because their install scripts never run.
+    `,
+    flatten,
+  }),
+  'strict-npmrc': new Definition('strict-npmrc', {
+    default: false,
+    type: Boolean,
+    description: `
+      If set to \`true\`, unknown configuration keys found in \`.npmrc\` files
+      are treated as a hard error instead of a warning.
+
+      Unknown command line flags and abbreviated flags always error regardless
+      of this setting.
     `,
     flatten,
   }),
