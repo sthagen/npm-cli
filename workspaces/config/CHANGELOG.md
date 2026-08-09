@@ -1,12 +1,16 @@
 # Changelog
 
+## [11.0.1](https://github.com/npm/cli/compare/config-v11.0.0...config-v11.0.1) (2026-07-27)
+### Documentation
+* [`9e17dc0`](https://github.com/npm/cli/commit/9e17dc064782ca1a1fd7f549e5a2fc7903f7fe51) [#9805](https://github.com/npm/cli/pull/9805) clarify npm 12 unknown-config breaking change in changelogs (#9805) (@Hashim1999164)
+
 ## [11.0.0](https://github.com/npm/cli/compare/config-v11.0.0-pre.3...config-v11.0.0) (2026-07-08)
 ### ⚠️ BREAKING CHANGES
 * `npm shrinkwrap` is removed, the `shrinkwrap` config alias is removed, and `npm-shrinkwrap.json` is no longer loaded or honored at the project root or from inside dependency tarballs. Rename project-root `npm-shrinkwrap.json` to `package-lock.json`; use `bundleDependencies` if you need to ship a locked dependency tree.
 * The default license for `npm init` has been changed from "ISC" to an empty string. If not set, the license field will be omitted from new packages.
 * `npm` now supports node `^22.22.2 || ^24.15.0 || >=26.0.0`
 * allow-git and allow-remote now default to "none"; set them to "all" (or "root") to install git or user-supplied tarball-URL dependencies.
-* unknown configs in .npmrc, unknown CLI flags, abbreviated flags, and single-hyphen multi-char shorthands now throw instead of warning.
+* unknown CLI flags, abbreviated flags, and single-hyphen multi-char shorthands now throw instead of warning. (Unknown `.npmrc` configs still warn by default; opt into erroring with the new `strict-npmrc` config.)
 ### Features
 * [`5b83698`](https://github.com/npm/cli/commit/5b83698a4f76e3f2962b9954dddb180fa85d4c77) [#9737](https://github.com/npm/cli/pull/9737) trigger release process (#9737) (@reggi)
 
@@ -29,7 +33,7 @@
 * The default license for `npm init` has been changed from "ISC" to an empty string. If not set, the license field will be omitted from new packages.
 * `npm` now supports node `^22.22.2 || ^24.15.0 || >=26.0.0`
 * allow-git and allow-remote now default to "none"; set them to "all" (or "root") to install git or user-supplied tarball-URL dependencies.
-* unknown configs in .npmrc, unknown CLI flags, abbreviated flags, and single-hyphen multi-char shorthands now throw instead of warning.
+* unknown CLI flags, abbreviated flags, and single-hyphen multi-char shorthands now throw instead of warning. (Unknown `.npmrc` configs still warn by default; opt into erroring with the new `strict-npmrc` config.)
 ### Features
 * [`1db885c`](https://github.com/npm/cli/commit/1db885c84b2dfc5126ab663abb12262b533922c1) [#9439](https://github.com/npm/cli/pull/9439) native dependency patching (npm patch add/commit/update/ls/rm) (#9439) (@manzoorwanijk)
 * [`fc80bb3`](https://github.com/npm/cli/commit/fc80bb359502699bb0a055157e01eaedd5bd73c8) [#9234](https://github.com/npm/cli/pull/9234) remove default license for npm init (@owlstronaut)
